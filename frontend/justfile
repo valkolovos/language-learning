@@ -1,0 +1,287 @@
+# AI Language Learning Frontend - Just Commands
+# Run with: just <command> or just --list to see all commands
+
+# Default command - show help
+default:
+    @just --list
+
+# Install dependencies
+install:
+    @echo "Installing dependencies..."
+    nvm use
+    npm install
+
+# Install production dependencies only
+install-prod:
+    @echo "Installing production dependencies..."
+    nvm use
+    npm ci --only=production
+
+# Ensure correct Node.js version
+nvm-use:
+    @echo "Using Node.js version from .nvmrc..."
+    nvm use
+    @echo "Current Node.js version:"
+    node --version
+
+# Show Node.js version info
+node-info:
+    @echo "Node.js version information:"
+    @echo "Current version:"
+    node --version
+    @echo "npm version:"
+    npm --version
+    @echo "nvm current:"
+    nvm current
+    @echo "Available versions:"
+    nvm list
+
+# Start development server
+dev:
+    @echo "Starting development server..."
+    nvm use
+    npm start
+
+# Build for production
+build:
+    @echo "Building for production..."
+    nvm use
+    npm run build
+
+# Build and analyze bundle
+build-analyze:
+    @echo "Building and analyzing bundle..."
+    nvm use
+    npm run build
+    npx webpack-bundle-analyzer build/static/js/*.js
+
+# Run tests
+test:
+    @echo "Running tests..."
+    nvm use
+    npm test
+
+# Run tests in watch mode
+test-watch:
+    @echo "Running tests in watch mode..."
+    nvm use
+    npm test -- --watch
+
+# Run tests with coverage
+test-cov:
+    @echo "Running tests with coverage..."
+    nvm use
+    npm run test:coverage
+
+# Run E2E tests
+test-e2e:
+    @echo "Running E2E tests..."
+    nvm use
+    npm run test:e2e
+
+# Run E2E tests in headed mode
+test-e2e-headed:
+    @echo "Running E2E tests in headed mode..."
+    nvm use
+    npm run test:e2e -- --headed
+
+# Run E2E tests with specific browser
+test-e2e-browser browser:
+    @echo "Running E2E tests with {{browser}}..."
+    nvm use
+    npm run test:e2e -- --project={{browser}}
+
+# Lint code
+lint:
+    @echo "Running ESLint..."
+    nvm use
+    npm run lint
+
+# Fix linting issues automatically
+lint-fix:
+    @echo "Fixing linting issues..."
+    nvm use
+    npm run lint:fix
+
+# Format code
+format:
+    @echo "Formatting code with Prettier..."
+    nvm use
+    npm run format
+
+# Check code formatting
+format-check:
+    @echo "Checking code formatting..."
+    nvm use
+    npm run format -- --check
+
+# Type checking
+type-check:
+    @echo "Running TypeScript type checking..."
+    nvm use
+    npm run type-check
+
+# Run all code quality checks
+quality: lint format-check type-check
+    @echo "All code quality checks passed! ✨"
+
+# Start storybook
+storybook:
+    @echo "Starting Storybook..."
+    nvm use
+    npm run storybook
+
+# Build storybook
+storybook-build:
+    @echo "Building Storybook..."
+    nvm use
+    npm run build-storybook
+
+# Start development server with HTTPS
+dev-https:
+    @echo "Starting development server with HTTPS..."
+    nvm use
+    HTTPS=true npm start
+
+# Start development server on specific port
+dev-port port:
+    @echo "Starting development server on port {{port}}..."
+    nvm use
+    PORT={{port}} npm start
+
+# Bundle analysis
+analyze:
+    @echo "Analyzing bundle..."
+    nvm use
+    npm run build
+    npx webpack-bundle-analyzer build/static/js/*.js
+
+# Performance audit
+audit:
+    @echo "Running performance audit..."
+    nvm use
+    npm run build
+    npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html
+
+# Check for security vulnerabilities
+security:
+    @echo "Checking for security vulnerabilities..."
+    nvm use
+    npm audit
+    npm audit --audit-level=moderate
+
+# Fix security vulnerabilities
+security-fix:
+    @echo "Fixing security vulnerabilities..."
+    nvm use
+    npm audit fix
+
+# Update dependencies
+update:
+    @echo "Updating dependencies..."
+    nvm use
+    npm update
+    npm audit fix
+
+# Clean build artifacts
+clean:
+    @echo "Cleaning build artifacts..."
+    rm -rf build/
+    rm -rf node_modules/.cache/
+    rm -rf coverage/
+    rm -rf .nyc_output/
+
+# Clean all (including node_modules)
+clean-all: clean
+    @echo "Removing node_modules..."
+    rm -rf node_modules/
+    rm -f package-lock.json
+
+# Docker commands
+docker-build:
+    @echo "Building Docker image..."
+    docker build -t ai-language-learning-frontend .
+
+docker-run:
+    @echo "Running Docker container..."
+    docker run -p 3000:3000 ai-language-learning-frontend
+
+# Development workflow
+workflow: quality test-cov
+    @echo "Development workflow completed! 🎉"
+
+# Pre-commit checks
+pre-commit: quality test
+    @echo "Pre-commit checks passed! ✨"
+
+# CI pipeline simulation
+ci: quality test-cov test-e2e security
+    @echo "CI pipeline completed! 🚀"
+
+# Start all development tools
+dev-tools: dev storybook
+    @echo "All development tools started!"
+
+# Health check
+health:
+    @echo "Checking application health..."
+    curl -f http://localhost:3000 || echo "Application not running"
+
+# Show bundle size
+bundle-size:
+    @echo "Analyzing bundle size..."
+    nvm use
+    npm run build
+    npx webpack-bundle-analyzer build/static/js/*.js --mode=static
+
+# Run specific test file
+test-file file:
+    @echo "Running tests in {{file}}..."
+    nvm use
+    npm test -- {{file}}
+
+# Run specific test with pattern
+test-pattern pattern:
+    @echo "Running tests matching pattern: {{pattern}}..."
+    nvm use
+    npm test -- --testNamePattern="{{pattern}}"
+
+# Run tests with specific environment
+test-env env:
+    @echo "Running tests with environment: {{env}}..."
+    nvm use
+    NODE_ENV={{env}} npm test
+
+# Development server with specific host
+dev-host host:
+    @echo "Starting development server on host {{host}}..."
+    nvm use
+    HOST={{host}} npm start
+
+# Help
+help:
+    @echo "AI Language Learning Frontend - Available Commands:"
+    @echo ""
+    @echo "Node.js Management:"
+    @echo "  just nvm-use         - Use Node.js version from .nvmrc"
+    @echo "  just node-info       - Show Node.js version information"
+    @echo ""
+    @echo "Development:"
+    @echo "  just dev             - Start development server"
+    @echo "  just build           - Build for production"
+    @echo "  just install         - Install dependencies"
+    @echo ""
+    @echo "Testing:"
+    @echo "  just test            - Run tests"
+    @echo "  just test-cov        - Run tests with coverage"
+    @echo "  just test-e2e        - Run E2E tests"
+    @echo ""
+    @echo "Code Quality:"
+    @echo "  just lint            - Run ESLint"
+    @echo "  just format          - Format code"
+    @echo "  just quality         - Run all quality checks"
+    @echo ""
+    @echo "Utilities:"
+    @echo "  just clean           - Clean build artifacts"
+    @echo "  just analyze         - Analyze bundle"
+    @echo "  just help            - Show this help"

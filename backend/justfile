@@ -1,0 +1,252 @@
+# AI Language Learning Backend - Just Commands
+# Run with: just <command> or just --list to see all commands
+
+# Default command - show help
+default:
+    @just --list
+
+# Install dependencies
+install:
+    @echo "Installing dependencies with uv..."
+    uv pip install -e ".[dev]"
+
+# Install only production dependencies
+install-prod:
+    @echo "Installing production dependencies..."
+    uv pip install -e .
+
+# Create virtual environment
+venv:
+    @echo "Creating virtual environment..."
+    uv venv
+
+# Run the application in development mode
+dev:
+    @echo "Starting development server..."
+    uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Run the application in production mode
+prod:
+    @echo "Starting production server..."
+    uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Run all tests
+test:
+    @echo "Running all tests..."
+    uv run pytest tests/ features/ -v
+
+# Run unit tests only
+test-unit:
+    @echo "Running unit tests..."
+    uv run pytest tests/ -v
+
+# Run BDD tests only
+test-bdd:
+    @echo "Running BDD tests..."
+    uv run pytest features/ -v
+
+# Run tests with coverage
+test-cov:
+    @echo "Running tests with coverage..."
+    uv run pytest tests/ features/ -v --cov=app --cov-report=html --cov-report=term-missing
+
+# Run tests with coverage and generate XML report
+test-cov-xml:
+    @echo "Running tests with coverage and XML report..."
+    uv run pytest tests/ features/ -v --cov=app --cov-report=xml --cov-report=html
+
+# Run specific test file
+test-file file:
+    @echo "Running tests in {{file}}..."
+    uv run pytest {{file}} -v
+
+# Run specific test function
+test-func file func:
+    @echo "Running test function {{func}} in {{file}}..."
+    uv run pytest {{file}}::{{func}} -v
+
+# Run tests in parallel
+test-parallel:
+    @echo "Running tests in parallel..."
+    uv run pytest tests/ features/ -v -n auto
+
+# Run only failed tests
+test-failed:
+    @echo "Running only failed tests..."
+    uv run pytest --lf -v
+
+# Run tests and stop on first failure
+test-fail-fast:
+    @echo "Running tests with fail-fast..."
+    uv run pytest tests/ features/ -v -x
+
+# Run tests with verbose output
+test-verbose:
+    @echo "Running tests with verbose output..."
+    uv run pytest tests/ features/ -v -s
+
+# Code formatting
+format:
+    @echo "Formatting code with black..."
+    uv run black .
+    @echo "Sorting imports with isort..."
+    uv run isort .
+
+# Check code formatting without making changes
+format-check:
+    @echo "Checking code formatting..."
+    uv run black . --check
+    uv run isort . --check
+
+# Linting
+lint:
+    @echo "Running flake8..."
+    uv run flake8 .
+    @echo "Running mypy..."
+    uv run mypy .
+
+# Type checking only
+type-check:
+    @echo "Running type checking..."
+    uv run mypy .
+
+# Security checks
+security:
+    @echo "Running security checks..."
+    uv run bandit -r app/ -f json -o security-report.json || true
+    @echo "Security report generated: security-report.json"
+
+# Run all code quality checks
+quality: format-check lint type-check
+    @echo "All code quality checks passed! ✨"
+
+# Database migrations
+migrate:
+    @echo "Running database migrations..."
+    uv run alembic upgrade head
+
+# Create new migration
+migrate-create message:
+    @echo "Creating new migration: {{message}}..."
+    uv run alembic revision --autogenerate -m "{{message}}"
+
+# Rollback migration
+migrate-rollback:
+    @echo "Rolling back last migration..."
+    uv run alembic downgrade -1
+
+# Database seeding
+seed:
+    @echo "Seeding database..."
+    uv run python scripts/seed_database.py
+
+# Clean up generated files
+clean:
+    @echo "Cleaning up generated files..."
+    rm -rf .pytest_cache/
+    rm -rf htmlcov/
+    rm -rf .coverage
+    rm -rf *.egg-info/
+    rm -rf dist/
+    rm -rf build/
+    find . -type d -name __pycache__ -delete
+    find . -type f -name "*.pyc" -delete
+
+# Clean virtual environment
+clean-venv:
+    @echo "Removing virtual environment..."
+    rm -rf .venv/
+
+# Full clean (including virtual environment)
+clean-all: clean clean-venv
+    @echo "Full cleanup completed!"
+
+# Show dependency tree
+deps:
+    @echo "Showing dependency tree..."
+    uv tree
+
+# Update dependencies
+update:
+    @echo "Updating dependencies..."
+    uv pip install --upgrade -e ".[dev]"
+
+# Lock dependencies
+lock:
+    @echo "Locking dependencies..."
+    uv lock
+
+# Show outdated packages
+outdated:
+    @echo "Checking for outdated packages..."
+    uv pip list --outdated
+
+# Run performance profiling
+profile:
+    @echo "Running performance profiling..."
+    uv run python -m cProfile -o profile.stats app/main.py
+
+# Show profile results
+profile-show:
+    @echo "Showing profile results..."
+    uv run python -c "import pstats; pstats.Stats('profile.stats').sort_stats('cumulative').print_stats(20)"
+
+# Generate API documentation
+docs:
+    @echo "Generating API documentation..."
+    uv run python -c "import uvicorn; from app.main import app; uvicorn.run(app, host='0.0.0.0', port=8000, log_level='info')"
+
+# Health check
+health:
+    @echo "Checking application health..."
+    curl -f http://localhost:8000/health || echo "Application not running"
+
+# Docker commands
+docker-build:
+    @echo "Building Docker image..."
+    docker build -t ai-language-learning-backend .
+
+docker-run:
+    @echo "Running Docker container..."
+    docker run -p 8000:8000 ai-language-learning-backend
+
+# Development workflow - run tests, format, and lint
+workflow: test quality
+    @echo "Development workflow completed! 🎉"
+
+# Pre-commit checks
+pre-commit: format-check lint type-check test-unit
+    @echo "Pre-commit checks passed! ✨"
+
+# CI pipeline simulation
+ci: test-cov-xml quality security
+    @echo "CI pipeline completed! 🚀"
+
+# Help
+help:
+    @echo "AI Language Learning Backend - Available Commands:"
+    @echo ""
+    @echo "Development:"
+    @echo "  just dev          - Start development server"
+    @echo "  just prod         - Start production server"
+    @echo "  just install      - Install dependencies"
+    @echo ""
+    @echo "Testing:"
+    @echo "  just test         - Run all tests"
+    @echo "  just test-unit    - Run unit tests only"
+    @echo "  just test-bdd     - Run BDD tests only"
+    @echo "  just test-cov     - Run tests with coverage"
+    @echo ""
+    @echo "Code Quality:"
+    @echo "  just format       - Format code"
+    @echo "  just lint         - Run linters"
+    @echo "  just quality      - Run all quality checks"
+    @echo ""
+    @echo "Database:"
+    @echo "  just migrate      - Run migrations"
+    @echo "  just seed         - Seed database"
+    @echo ""
+    @echo "Utilities:"
+    @echo "  just clean        - Clean generated files"
+    @echo "  just deps         - Show dependency tree"
+    @echo "  just help         - Show this help"
