@@ -19,11 +19,11 @@ services:
       - redis
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  # Frontend React app
+  # Frontend React app (served by nginx)
   frontend:
     build: ./frontend
     ports:
-      - "3000:3000"
+      - "3000:80"
     volumes:
       - ./frontend:/app
       - /app/node_modules

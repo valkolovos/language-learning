@@ -9,10 +9,17 @@ default:
 help:
     @echo "AI Language Learning Application - Available Commands:"
     @echo ""
+    @echo "🚀 Quick Start:"
+    @echo "  just start        - Local development mode (fast iteration)"
+    @echo "  just start-docker - Docker mode (production-like environment)"
+    @echo ""
     @echo "Full Stack Management:"
     @echo "  just start        - Start ALL services (DB + Redis + Backend + Frontend)"
     @echo "  just stop         - Stop ALL services (DB + Redis + Backend + Frontend)"
     @echo "  just restart      - Restart all services"
+    @echo "  just start-docker - Start ALL services in Docker mode (production-like)"
+    @echo "  just stop-docker  - Stop ALL Docker services"
+    @echo "  just restart-docker - Restart all Docker services"
     @echo "  just status       - Show service status and health checks"
     @echo "  just logs         - Show all service logs"
     @echo ""
@@ -22,10 +29,16 @@ help:
     @echo "  just dev-backend  - Start backend development server only"
     @echo "  just dev-frontend - Start frontend development server only"
     @echo ""
+    @echo "Docker Mode (Production-like):"
+    @echo "  just start-docker - Start all services in Docker containers"
+    @echo "  just stop-docker  - Stop all Docker services"
+    @echo "  just restart-docker - Restart all Docker services"
+    @echo ""
     @echo "Database Management:"
     @echo "  just db-start     - Start database services (PostgreSQL + Redis)"
     @echo "  just db-stop      - Stop database services"
     @echo "  just db-reset     - Reset database (WARNING: destroys data)"
+    @echo "  just db-seed      - Seed database with sample data"
     @echo "  just verify-db-health - Verify PostgreSQL and Redis health"
     @echo ""
     @echo "Testing:"
@@ -46,10 +59,13 @@ help:
     @echo "  just clean        - Clean all generated files"
     @echo "  just docker       - Docker management commands"
     @echo "  just health       - Health check all services"
+    @echo "  just modes        - Explain development modes"
     @echo ""
     @echo "Quick Start:"
-    @echo "  just start        - Start everything for development"
+    @echo "  just start        - Start everything for development (local mode)"
+    @echo "  just start-docker - Start everything in Docker mode (production-like)"
     @echo "  just stop         - Stop everything when done"
+    @echo "  just stop-docker  - Stop Docker services"
     @echo "  just dev          - Alternative to start (same functionality)"
     @echo "  just dev-stop     - Stop just the app services (keep DB running)"
 
@@ -165,6 +181,21 @@ start:
     @just status
     @echo "✅ All services started and verified"
 
+# Start all services in Docker mode (production-like)
+start-docker:
+    @echo "Starting all services in Docker mode..."
+    @echo "Building Docker images..."
+    @just docker-build
+    @echo "Starting database services..."
+    @just db-start
+    @echo "Starting application services in Docker..."
+    docker-compose up -d backend frontend nginx
+    @echo "Waiting for services to initialize..."
+    @sleep 10
+    @echo "Checking service status..."
+    @just status
+    @echo "✅ All Docker services started"
+
 # Stop all services
 stop:
     @echo "Stopping all services..."
@@ -174,9 +205,19 @@ stop:
     docker-compose down
     @echo "✅ All services stopped"
 
+# Stop all Docker services
+stop-docker:
+    @echo "Stopping all Docker services..."
+    docker-compose down
+    @echo "✅ All Docker services stopped"
+
 # Restart all services
 restart: stop start
     @echo "Services restarted!"
+
+# Restart all Docker services
+restart-docker: stop-docker start-docker
+    @echo "Docker services restarted!"
 
 # Show service status
 status:
@@ -350,6 +391,26 @@ node-info:
     @echo "Available versions:"
     nvm list
 
+# Explain the difference between development modes
+modes:
+    @echo "Development Modes:"
+    @echo ""
+    @echo "🐳 Docker Mode (just start-docker):"
+    @echo "  • All services run in Docker containers"
+    @echo "  • Production-like environment"
+    @echo "  • Good for: demos, testing, team onboarding"
+    @echo "  • Slower development cycle (rebuild containers for changes)"
+    @echo ""
+    @echo "💻 Local Mode (just start):"
+    @echo "  • Database services in Docker, app services locally"
+    @echo "  • Fast development iteration with hot reloading"
+    @echo "  • Good for: active development, debugging, fast iteration"
+    @echo "  • Requires local Python/Node.js setup"
+    @echo ""
+    @echo "🔄 Switching:"
+    @echo "  • From Docker to Local: just stop-docker && just start"
+    @echo "  • From Local to Docker: just stop && just start-docker"
+
 # Database management
 db-start:
     @echo "Starting database services..."
@@ -369,6 +430,12 @@ db-reset:
     docker-compose down -v postgres redis
     docker-compose up -d postgres redis
     @echo "✅ Database reset complete"
+
+db-seed:
+    @echo "Seeding database with sample data..."
+    @echo "Note: This requires the backend to be running and database tables to exist"
+    cd backend && just seed
+    @echo "✅ Database seeding complete"
 
 # Wait for services to be ready
 wait-for-services:

@@ -2,6 +2,10 @@
 
 # AI Language Learning Application Setup Script
 # This script sets up the complete development environment
+#
+# Usage:
+#   ./setup.sh                    # Interactive mode (default)
+#   NON_INTERACTIVE=true ./setup.sh  # Non-interactive mode (skips prompts)
 
 set -e  # Exit on any error
 
@@ -51,24 +55,36 @@ check_docker_compose() {
     print_success "Docker Compose is available"
 }
 
-# Check Python version
+# Check Python version using uv
 check_python() {
-    print_status "Checking Python version..."
-    if ! command -v python3 &> /dev/null; then
-        print_error "Python 3 is not installed. Please install Python 3.11+ and try again."
+    print_status "Checking Python version using uv..."
+    
+    # First check if uv is available (this should be called after check_uv)
+    if ! command -v uv &> /dev/null; then
+        print_error "uv is not available. Please install uv first."
         exit 1
     fi
     
-    PYTHON_VERSION=$(python3 --version | cut -d' ' -f2)
-    PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d'.' -f1)
-    PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d'.' -f2)
+    # Check if we have a Python version that meets our requirements (>=3.11)
+    print_status "Looking for Python 3.11+ installation..."
     
-    if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]); then
-        print_error "Python 3.11+ is required. Current version: $PYTHON_VERSION"
-        exit 1
+    # Try to find Python 3.11+ using uv
+    PYTHON_VERSION=$(uv python find ">=3.11" 2>/dev/null | head -n1 | grep -o 'cpython-[0-9]\+\.[0-9]\+' | head -n1)
+    
+    if [ -z "$PYTHON_VERSION" ]; then
+        print_status "No Python 3.11+ found, attempting to install with uv..."
+        uv python install "3.11"
+        PYTHON_VERSION="3.11"
     fi
     
-    print_success "Python $PYTHON_VERSION is available"
+    # Verify the Python version works
+    if uv run python --version &> /dev/null; then
+        ACTUAL_VERSION=$(uv run python --version | cut -d' ' -f2)
+        print_success "Python $ACTUAL_VERSION is available via uv"
+    else
+        print_error "Failed to verify Python installation via uv"
+        exit 1
+    fi
 }
 
 # Check if nvm is available and use it
@@ -168,7 +184,7 @@ check_just() {
         else
             # Generic Unix
             curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to ~/.local/bin
-            export PATH="$HOME/.local/bin:$PATH"
+                export PATH="$HOME/.local/bin:$PATH"
         fi
         
         # Verify installation
@@ -178,6 +194,12 @@ check_just() {
         fi
     fi
     print_success "just is available"
+    
+    # Check if required justfile commands are available
+    print_status "Verifying justfile commands..."
+    if ! just verify-db-health --help > /dev/null 2>&1; then
+        print_warning "Some justfile commands may not be available. This could cause issues."
+    fi
 }
 
 # Create necessary directories
@@ -206,10 +228,7 @@ setup_backend() {
         uv venv
     fi
     
-    # Activate virtual environment
-    source .venv/bin/activate
-    
-    # Install dependencies using uv
+    # Install dependencies using uv (no need to activate venv manually)
     print_status "Installing Python dependencies with uv..."
     uv pip install -e .
     uv pip install -e ".[dev]"
@@ -267,30 +286,169 @@ CREATE TYPE lesson_status AS ENUM ('not_started', 'in_progress', 'completed', 'm
 CREATE TYPE exercise_type AS ENUM ('multiple_choice', 'fill_blank', 'matching', 'speaking', 'listening');
 CREATE TYPE achievement_rarity AS ENUM ('common', 'rare', 'epic', 'legendary');
 
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-CREATE INDEX IF NOT EXISTS idx_lessons_target_language ON lessons(target_language);
-CREATE INDEX IF NOT EXISTS idx_lessons_difficulty_level ON lessons(difficulty_level);
-CREATE INDEX IF NOT EXISTS idx_user_progress_user_id ON user_lesson_progress(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_progress_lesson_id ON user_lesson_progress(lesson_id);
-
--- Insert sample data for testing
-INSERT INTO achievements (name, description, achievement_type, criteria, xp_reward, rarity) VALUES
-('First Steps', 'Complete your first lesson', 'lessons', '{"threshold": 1, "timeframe": "lifetime"}', 50, 'common'),
-('Streak Master', 'Maintain a 7-day learning streak', 'streak', '{"threshold": 7, "timeframe": "daily"}', 200, 'rare'),
-('Language Explorer', 'Complete 10 lessons', 'lessons', '{"threshold": 10, "timeframe": "lifetime"}', 500, 'epic'),
-('Dedicated Learner', 'Study for 30 days in a row', 'streak', '{"threshold": 30, "timeframe": "daily"}', 1000, 'legendary')
-ON CONFLICT (name) DO NOTHING;
+-- Note: Tables and indexes will be created by the application's models and migrations
+-- This ensures proper schema management and version control
+-- Sample data can be inserted after the application starts and tables are created
 EOF
     
     print_success "Database initialization script created"
+    
+    # Create seeding script
+    print_status "Creating database seeding script..."
+    cat > backend/scripts/seed_data.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Seed script to populate the database with initial data.
+This script should be run after the application has started and created all tables.
+"""
+
+import asyncio
+import sys
+from pathlib import Path
+
+# Add the backend directory to the Python path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from app.core.database import get_db
+from app.models.gamification import Achievement
+from app.models.learning import Lesson
+from sqlalchemy.orm import Session
+
+
+def create_sample_achievements(db: Session) -> None:
+    """Create sample achievements in the database."""
+    print("Creating sample achievements...")
+    
+    achievements_data = [
+        {
+            "name": "First Steps",
+            "description": "Complete your first lesson",
+            "achievement_type": "lessons",
+            "criteria": {"threshold": 1, "timeframe": "lifetime"},
+            "xp_reward": 50,
+            "rarity": "common"
+        },
+        {
+            "name": "Streak Master",
+            "description": "Maintain a 7-day learning streak",
+            "achievement_type": "streak",
+            "criteria": {"threshold": 7, "timeframe": "daily"},
+            "xp_reward": 200,
+            "rarity": "rare"
+        },
+        {
+            "name": "Language Explorer",
+            "description": "Complete 10 lessons",
+            "achievement_type": "lessons",
+            "criteria": {"threshold": 10, "timeframe": "lifetime"},
+            "xp_reward": 500,
+            "rarity": "epic"
+        },
+        {
+            "name": "Dedicated Learner",
+            "description": "Study for 30 days in a row",
+            "achievement_type": "streak",
+            "criteria": {"threshold": 30, "timeframe": "daily"},
+            "xp_reward": 1000,
+            "rarity": "legendary"
+        }
+    ]
+    
+    for achievement_data in achievements_data:
+        # Check if achievement already exists
+        existing = db.query(Achievement).filter_by(name=achievement_data["name"]).first()
+        if not existing:
+            achievement = Achievement(**achievement_data)
+            db.add(achievement)
+            print(f"  Created achievement: {achievement.name}")
+        else:
+            print(f"  Achievement already exists: {achievement_data['name']}")
+    
+    db.commit()
+    print("Sample achievements created successfully!")
+
+
+def create_sample_lessons(db: Session) -> None:
+    """Create sample lessons in the database."""
+    print("Creating sample lessons...")
+    
+    lessons_data = [
+        {
+            "title": "Basic Greetings",
+            "description": "Learn essential greetings in your target language",
+            "target_language": "spanish",
+            "difficulty_level": "beginner",
+            "estimated_duration": 15,
+            "content": {
+                "vocabulary": ["hola", "buenos días", "buenas tardes", "buenas noches"],
+                "grammar": "Basic greetings and time-based salutations",
+                "exercises": ["matching", "fill_blank"]
+            }
+        },
+        {
+            "title": "Numbers 1-10",
+            "description": "Learn to count from 1 to 10",
+            "target_language": "spanish",
+            "difficulty_level": "beginner",
+            "estimated_duration": 20,
+            "content": {
+                "vocabulary": ["uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez"],
+                "grammar": "Cardinal numbers",
+                "exercises": ["multiple_choice", "fill_blank"]
+            }
+        }
+    ]
+    
+    for lesson_data in lessons_data:
+        # Check if lesson already exists
+        existing = db.query(Lesson).filter_by(title=lesson_data["title"]).first()
+        if not existing:
+            lesson = Lesson(**lesson_data)
+            db.add(lesson)
+            print(f"  Created lesson: {lesson.title}")
+        else:
+            print(f"  Lesson already exists: {lesson_data['title']}")
+    
+    db.commit()
+    print("Sample lessons created successfully!")
+
+
+async def main():
+    """Main function to seed the database."""
+    print("🌱 Starting database seeding...")
+    
+    try:
+        # Get database session
+        db = next(get_db())
+        
+        # Create sample data
+        create_sample_achievements(db)
+        create_sample_lessons(db)
+        
+        print("✅ Database seeding completed successfully!")
+        
+    except Exception as e:
+        print(f"❌ Error during database seeding: {e}")
+        sys.exit(1)
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+EOF
+    
+    # Make the script executable
+    chmod +x backend/scripts/seed_data.py
+    
+    print_success "Database seeding script created"
 }
 
 # Setup nginx configuration
 setup_nginx() {
     print_status "Setting up nginx configuration..."
     
+    # Create nginx config for the root nginx service
     cat > nginx/nginx.conf << 'EOF'
 events {
     worker_connections 1024;
@@ -335,6 +493,32 @@ http {
 }
 EOF
     
+    # Also create nginx config for the frontend Docker build
+    cat > frontend/nginx.conf << 'EOF'
+events {
+    worker_connections 1024;
+}
+
+http {
+    server {
+        listen 80;
+        server_name localhost;
+        
+        # Serve static files
+        location / {
+            root /usr/share/nginx/html;
+            try_files $uri $uri/ /index.html;
+        }
+        
+        # Health check
+        location /health {
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+    }
+}
+EOF
+    
     print_success "Nginx configuration created"
 }
 
@@ -342,11 +526,9 @@ EOF
 start_services() {
     print_status "Building and starting services..."
     
-    # Build images
-    docker-compose build
-    
-    # Start services
-    docker-compose up -d
+    # Use the new just command for starting all services in Docker mode
+    print_status "Starting all services in Docker mode..."
+    just start-docker
     
     print_success "Services started successfully"
 }
@@ -355,42 +537,85 @@ start_services() {
 wait_for_services() {
     print_status "Waiting for services to be ready..."
     
-    # Wait for database
+    # Wait for database using justfile command
     print_status "Waiting for database..."
-    until docker-compose exec -T postgres pg_isready -U postgres > /dev/null 2>&1; do
-        sleep 2
+    until just verify-db-health > /dev/null 2>&1; do
+        print_status "Database not ready yet, waiting..."
+        sleep 5
     done
+    print_success "Database is ready"
     
-    # Wait for backend
+    # Wait for backend with timeout
     print_status "Waiting for backend..."
-    until curl -f http://localhost:8000/health > /dev/null 2>&1; do
-        sleep 2
+    local backend_timeout=60
+    local backend_elapsed=0
+    while [ $backend_elapsed -lt $backend_timeout ]; do
+        if curl -f http://localhost:8000/health > /dev/null 2>&1; then
+            print_success "Backend is ready"
+            break
+        fi
+        print_status "Backend not ready yet, waiting... ($backend_elapsed/$backend_timeout seconds)"
+        sleep 5
+        backend_elapsed=$((backend_elapsed + 5))
     done
     
-    # Wait for frontend
+    if [ $backend_elapsed -ge $backend_timeout ]; then
+        print_warning "Backend health check timed out after $backend_timeout seconds"
+        print_warning "You may need to check backend logs manually"
+    fi
+    
+    # Wait for frontend with timeout
     print_status "Waiting for frontend..."
-    until curl -f http://localhost:3000 > /dev/null 2>&1; do
-        sleep 2
+    local frontend_timeout=60
+    local frontend_elapsed=0
+    while [ $frontend_elapsed -lt $frontend_timeout ]; do
+        # Check frontend on port 3000 (mapped from container port 80)
+        if curl -f http://localhost:3000 > /dev/null 2>&1; then
+            print_success "Frontend is ready"
+            break
+        fi
+        print_status "Frontend not ready yet, waiting... ($frontend_elapsed/$frontend_timeout seconds)"
+        sleep 5
+        frontend_elapsed=$((frontend_elapsed + 5))
     done
     
-    print_success "All services are ready"
+    if [ $frontend_elapsed -ge $frontend_timeout ]; then
+        print_warning "Frontend health check timed out after $frontend_timeout seconds"
+        print_warning "You may need to check frontend logs manually"
+    fi
+    
+    print_success "Service health checks completed"
+    
+    # Show final service status
+    print_status "Final service status:"
+    just status
+}
+
+# Show service logs for debugging
+show_service_logs() {
+    print_status "Showing recent service logs for debugging..."
+    echo ""
+    echo "=== Database Logs ==="
+    docker-compose logs --tail=20 postgres
+    echo ""
+    echo "=== Backend Logs ==="
+    docker-compose logs --tail=20 backend
+    echo ""
+    echo "=== Frontend Logs ==="
+    docker-compose logs --tail=20 frontend
+    echo ""
+    echo "=== Nginx Logs ==="
+    docker-compose logs --tail=20 nginx
 }
 
 # Run tests using just
 run_tests() {
     print_status "Running tests using just..."
     
-    # Run backend tests
-    print_status "Running backend tests..."
-    cd backend
+    # Run all tests using root justfile
+    print_status "Running all tests..."
     just test
     
-    # Run frontend tests
-    print_status "Running frontend tests..."
-    cd ../frontend
-    just test
-    
-    cd ..
     print_success "All tests completed"
 }
 
@@ -398,7 +623,7 @@ run_tests() {
 show_status() {
     print_status "Application Status:"
     echo "  Backend API: http://localhost:8000"
-    echo "  Frontend: http://localhost:3000"
+    echo "  Frontend: http://localhost:3000 (served by nginx)"
     echo "  API Documentation: http://localhost:8000/docs"
     echo "  Health Check: http://localhost:8000/health"
     echo ""
@@ -407,12 +632,17 @@ show_status() {
     echo "  2. Set up Google Cloud credentials in credentials/"
     echo "  3. Configure OpenAI API key in backend/.env"
     echo "  4. Access the application at http://localhost:3000"
+    echo "  5. Seed the database with sample data: just db-seed"
     echo ""
     print_status "Development commands (using just):"
-    echo "  just dev              - Start development environment"
+    echo "  just start            - Start development environment (local mode)"
+    echo "  just start-docker     - Start services in Docker mode (production-like)"
+    echo "  just dev              - Alternative to start (same functionality)"
     echo "  just test             - Run all tests"
     echo "  just quality          - Run code quality checks"
     echo "  just format           - Format all code"
+    echo "  just db-seed          - Seed database with sample data"
+    echo "  just modes            - Explain development modes"
     echo "  just help             - Show all available commands"
     echo ""
     print_status "Node.js version management:"
@@ -430,9 +660,9 @@ main() {
     # Check prerequisites
     check_docker
     check_docker_compose
+    check_uv
     check_python
     check_nvm
-    check_uv
     check_just
     
     # Setup environment
@@ -444,13 +674,41 @@ main() {
     
     # Start services
     start_services
+    
+    # Give services a moment to start
+    print_status "Giving services time to initialize..."
+    sleep 10
+    
+    # Check service status
+    print_status "Checking service status..."
+    just status
+    
+    # Wait for services to be ready
     wait_for_services
     
+        # Offer to show logs if there were issues
+    if [ $? -ne 0 ]; then
+        echo ""
+        if [ "${NON_INTERACTIVE:-false}" = "true" ]; then
+            echo "Non-interactive mode: Skipping log display prompt"
+        else
+            read -p "Some services may not be fully ready. Show service logs for debugging? (y/n): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                show_service_logs
+            fi
+        fi
+    fi
+    
     # Run tests (optional)
-    read -p "Do you want to run tests now? (y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        run_tests
+    if [ "${NON_INTERACTIVE:-false}" = "true" ]; then
+        echo "Non-interactive mode: Skipping test execution prompt"
+    else
+        read -p "Do you want to run tests now? (y/n): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            run_tests
+        fi
     fi
     
     # Show final status
@@ -461,7 +719,9 @@ main() {
     echo ""
     echo "Now you can use 'just' commands for development:"
     echo "  just help             - Show all commands"
-    echo "  just dev              - Start development"
+    echo "  just start            - Start development (local mode)"
+    echo "  just start-docker     - Start services in Docker mode"
+    echo "  just modes            - Explain development modes"
     echo "  just test             - Run tests"
     echo "  just quality          - Code quality checks"
     echo ""

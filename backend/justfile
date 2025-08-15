@@ -155,8 +155,9 @@ migrate-rollback:
 
 # Database seeding
 seed:
-    @echo "Seeding database..."
-    uv run python scripts/seed_database.py
+    @echo "Seeding database with sample data..."
+    @echo "Note: This requires the backend to be running and database tables to exist"
+    uv run python scripts/seed_data_simple.py
 
 # Clean up generated files
 clean:
@@ -218,6 +219,8 @@ docs:
 health:
     @echo "Checking application health..."
     curl -f http://localhost:8000/health || echo "Application not running"
+
+
 
 # Docker commands
 docker-build:

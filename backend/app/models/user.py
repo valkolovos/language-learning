@@ -23,7 +23,7 @@ from app.core.database import Base
 
 if TYPE_CHECKING:
     from .gamification import DailyGoal, LearningStreak, UserAchievement
-    from .learning import UserExerciseAttempt
+    from .learning import UserExerciseAttempt, UserLessonProgress
     from .progress import LearningSession, ProgressRecord
 
 logger = structlog.get_logger(__name__)
@@ -73,6 +73,7 @@ class User(Base):
     user_exercise_attempts: Mapped[List["UserExerciseAttempt"]] = relationship(back_populates="user")
     learning_streaks: Mapped[List["LearningStreak"]] = relationship(back_populates="user")
     daily_goals: Mapped[List["DailyGoal"]] = relationship(back_populates="user")
+    user_progress: Mapped[List["UserLessonProgress"]] = relationship(back_populates="user")
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username='{self.username}', target_language='{self.target_language}')>"
