@@ -8,41 +8,69 @@ default:
 # Source nvm and use correct Node.js version
 nvm-use:
     @echo "Using Node.js version from .nvmrc..."
-    @source ~/.nvm/nvm.sh && nvm use
-    @echo "Current Node.js version:"
-    @source ~/.nvm/nvm.sh && node --version
+    @if command -v nvm &> /dev/null; then \
+        source ~/.nvm/nvm.sh && nvm use; \
+        echo "Current Node.js version:"; \
+        source ~/.nvm/nvm.sh && node --version; \
+    else \
+        echo "nvm not available, using system Node.js:"; \
+        node --version; \
+    fi
 
 # Install dependencies
 install:
     @echo "Installing dependencies..."
-    @source ~/.nvm/nvm.sh && nvm use && npm install
+    @if command -v nvm &> /dev/null; then \
+        source ~/.nvm/nvm.sh && nvm use && npm install; \
+    else \
+        npm install; \
+    fi
 
 # Install production dependencies only
 install-prod:
     @echo "Installing production dependencies..."
-    @source ~/.nvm/nvm.sh && nvm use && npm ci --only=production
+    @if command -v nvm &> /dev/null; then \
+        source ~/.nvm/nvm.sh && nvm use && npm ci --only=production; \
+    else \
+        npm ci --only=production; \
+    fi
 
 # Show Node.js version info
 node-info:
     @echo "Node.js version information:"
     @echo "Current version:"
-    @source ~/.nvm/nvm.sh && node --version
-    @echo "npm version:"
-    @source ~/.nvm/nvm.sh && npm --version
-    @echo "nvm current:"
-    @source ~/.nvm/nvm.sh && nvm current
-    @echo "Available versions:"
-    @source ~/.nvm/nvm.sh && nvm list
+    @if command -v nvm &> /dev/null; then \
+        source ~/.nvm/nvm.sh && node --version; \
+        echo "npm version:"; \
+        source ~/.nvm/nvm.sh && npm --version; \
+        echo "nvm current:"; \
+        source ~/.nvm/nvm.sh && nvm current; \
+        echo "Available versions:"; \
+        source ~/.nvm/nvm.sh && nvm list; \
+    else \
+        node --version; \
+        echo "npm version:"; \
+        npm --version; \
+        echo "nvm: not available"; \
+    fi
 
 # Start development server
 dev:
     @echo "Starting development server..."
-    @source ~/.nvm/nvm.sh && nvm use && npm start
+    @if command -v nvm &> /dev/null; then \
+        source ~/.nvm/nvm.sh && nvm use && npm start; \
+    else \
+        npm start; \
+    fi
 
 # Build for production
 build:
     @echo "Building for production..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run build
+    @if command -v nvm &> /dev/null; then \
+        source ~/.nvm/nvm.sh && nvm use && npm run build; \
+    else \
+        npm run build; \
+    fi
 
 # Build and analyze bundle
 build-analyze:
@@ -53,7 +81,11 @@ build-analyze:
 # Run tests
 test:
     @echo "Running tests..."
-    @source ~/.nvm/nvm.sh && nvm use && npm test -- --watchAll=false
+    @if command -v nvm &> /dev/null; then \
+        source ~/.nvm/nvm.sh && nvm use && npm test -- --watchAll=false; \
+    else \
+        npm test -- --watchAll=false; \
+    fi
 
 # Run tests in watch mode
 test-watch:
@@ -63,7 +95,11 @@ test-watch:
 # Run tests with coverage
 test-cov:
     @echo "Running tests with coverage..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run test:coverage
+    @if command -v nvm &> /dev/null; then \
+        source ~/.nvm/nvm.sh && nvm use && npm run test:coverage; \
+    else \
+        npm run test:coverage; \
+    fi
 
 # Run E2E tests
 test-e2e:
@@ -83,7 +119,11 @@ test-e2e-browser browser:
 # Lint code
 lint:
     @echo "Running ESLint..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run lint
+    @if command -v nvm &> /dev/null; then \
+        source ~/.nvm/nvm.sh && nvm use && npm run lint; \
+    else \
+        npm run lint; \
+    fi
 
 # Auto-fix linting issues
 lint-fix:
@@ -99,12 +139,20 @@ format:
 # Check code formatting
 format-check:
     @echo "Checking code formatting..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run format -- --check
+    @if command -v nvm &> /dev/null; then \
+        source ~/.nvm/nvm.sh && nvm use && npm run format -- --check; \
+    else \
+        npm run format -- --check; \
+    fi
 
 # Type checking
 type-check:
     @echo "Running TypeScript type checking..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run type-check
+    @if command -v nvm &> /dev/null; then \
+        source ~/.nvm/nvm.sh && nvm use && npm run type-check; \
+    else \
+        npm run type-check; \
+    fi
 
 # Run all code quality checks
 quality: lint format-check type-check

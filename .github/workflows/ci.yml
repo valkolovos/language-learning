@@ -129,7 +129,7 @@ jobs:
 
     - name: Run frontend tests
       working-directory: ./frontend
-      run: npm test -- --watchAll=false --coverage --coverageReporters=text --coverageReporters=lcov
+      run: just test-cov
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
@@ -212,19 +212,19 @@ jobs:
 
     - name: Check code formatting
       working-directory: ./frontend
-      run: npm run format -- --check
+      run: just format-check
 
     - name: Run linting
       working-directory: ./frontend
-      run: npm run lint
+      run: just lint
 
     - name: Run type checking
       working-directory: ./frontend
-      run: npm run type-check
+      run: just type-check
 
     - name: Check for security vulnerabilities
       working-directory: ./frontend
-      run: npm audit --audit-level=moderate
+      run: just security
 
   integration-tests:
     name: Integration Tests
@@ -310,7 +310,7 @@ jobs:
 
     - name: Build frontend
       working-directory: ./frontend
-      run: npm run build
+      run: just build
 
   e2e-tests:
     name: End-to-End Tests
@@ -398,13 +398,13 @@ jobs:
     - name: Start frontend server
       working-directory: ./frontend
       run: |
-        npm start &
+        just dev &
         sleep 30
 
     - name: Run E2E tests
       working-directory: ./frontend
       run: |
-        npm run test:e2e -- --watchAll=false
+        just test-e2e
 
   test-results:
     name: Test Results Summary
