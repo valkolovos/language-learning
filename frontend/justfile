@@ -1,6 +1,15 @@
 # AI Language Learning Frontend - Just Commands
 # Run with: just <command> or just --list to see all commands
 
+# Helper function to run npm commands with proper Node.js version
+# This works in both local (with nvm) and CI (without nvm) environments
+run-npm command:
+    @if command -v nvm &> /dev/null; then \
+        nvm use && npm {{command}}; \
+    else \
+        npm {{command}}; \
+    fi
+
 # Default command - show help
 default:
     @just --list
@@ -56,8 +65,16 @@ build:
 # Build and analyze bundle
 build-analyze:
     @echo "Building and analyzing bundle..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run build
-    @source ~/.nvm/nvm.sh && npx webpack-bundle-analyzer build/static/js/*.js
+    @if command -v nvm &> /dev/null; then \
+        nvm use && npm run build; \
+    else \
+        npm run build; \
+    fi
+    @if command -v nvm &> /dev/null; then \
+        nvm use && npx webpack-bundle-analyzer build/static/js/*.js; \
+    else \
+        npx webpack-bundle-analyzer build/static/js/*.js; \
+    fi
 
 # Run tests
 test:
@@ -67,7 +84,11 @@ test:
 # Run tests in watch mode
 test-watch:
     @echo "Running tests in watch mode..."
-    @source ~/.nvm/nvm.sh && nvm use && npm test -- --watch
+    @if command -v nvm &> /dev/null; then \
+        nvm use && npm test -- --watch; \
+    else \
+        npm test -- --watch; \
+    fi
 
 # Run tests with coverage
 test-cov:
@@ -77,12 +98,20 @@ test-cov:
 # Run E2E tests
 test-e2e:
     @echo "Running E2E tests..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run test:e2e
+    @if command -v nvm &> /dev/null; then \
+        nvm use && npm run test:e2e; \
+    else \
+        npm run test:e2e; \
+    fi
 
 # Run E2E tests in headed mode
 test-e2e-headed:
     @echo "Running E2E tests in headed mode..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run test:e2e -- --headed
+    @if command -v nvm &> /dev/null; then \
+        nvm use && npm run test:e2e -- --headed; \
+    else \
+        npm run test:e2e -- --headed; \
+    fi
 
 # Run E2E tests with specific browser
 test-e2e-browser browser:
@@ -97,13 +126,13 @@ lint:
 # Auto-fix linting issues
 lint-fix:
     @echo "Auto-fixing linting issues..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run lint:fix
+    @just run-npm "run lint:fix"
     @echo "Frontend linting issues auto-fixed! ✨"
 
 # Format code
 format:
     @echo "Formatting code with Prettier..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run format
+    @just run-npm "run format"
 
 # Check code formatting
 format-check:
@@ -122,51 +151,67 @@ quality: lint format-check type-check
 # Start storybook
 storybook:
     @echo "Starting Storybook..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run storybook
+    @just run-npm "run storybook"
 
 # Build storybook
 storybook-build:
     @echo "Building Storybook..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run build-storybook
+    @just run-npm "run build-storybook"
 
 # Start development server with HTTPS
 dev-https:
     @echo "Starting development server with HTTPS..."
-    @source ~/.nvm/nvm.sh && nvm use && HTTPS=true npm start
+    @if command -v nvm &> /dev/null; then \
+        nvm use && HTTPS=true npm start; \
+    else \
+        HTTPS=true npm start; \
+    fi
 
 # Start development server on specific port
 dev-port port:
     @echo "Starting development server on port {{port}}..."
-    @source ~/.nvm/nvm.sh && nvm use && PORT={{port}} npm start
+    @if command -v nvm &> /dev/null; then \
+        nvm use && PORT={{port}} npm start; \
+    else \
+        PORT={{port}} npm start; \
+    fi
 
 # Bundle analysis
 analyze:
     @echo "Analyzing bundle..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run build
-    @source ~/.nvm/nvm.sh && npx webpack-bundle-analyzer build/static/js/*.js
+    @just run-npm "run build"
+    @if command -v nvm &> /dev/null; then \
+        nvm use && npx webpack-bundle-analyzer build/static/js/*.js; \
+    else \
+        npx webpack-bundle-analyzer build/static/js/*.js; \
+    fi
 
 # Performance audit
 audit:
     @echo "Running performance audit..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run build
-    @source ~/.nvm/nvm.sh && npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html
+    @just run-npm "run build"
+    @if command -v nvm &> /dev/null; then \
+        nvm use && npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html; \
+    else \
+        npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html; \
+    fi
 
 # Check for security vulnerabilities
 security:
     @echo "Checking for security vulnerabilities..."
-    @source ~/.nvm/nvm.sh && nvm use && npm audit
-    @source ~/.nvm/nvm.sh && npm audit --audit-level=moderate
+    @just run-npm "audit"
+    @just run-npm "audit --audit-level=moderate"
 
 # Fix security vulnerabilities
 security-fix:
     @echo "Fixing security vulnerabilities..."
-    @source ~/.nvm/nvm.sh && nvm use && npm audit fix
+    @just run-npm "audit fix"
 
 # Update dependencies
 update:
     @echo "Updating dependencies..."
-    @source ~/.nvm/nvm.sh && nvm use && npm update
-    @source ~/.nvm/nvm.sh && npm audit fix
+    @just run-npm "update"
+    @just run-npm "audit fix"
 
 # Clean build artifacts
 clean:
