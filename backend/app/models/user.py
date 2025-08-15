@@ -34,6 +34,9 @@ class User(Base):
 
     __tablename__ = "users"
 
+    # XP and leveling constants
+    XP_PER_LEVEL = 1000
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     username: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
@@ -119,14 +122,14 @@ class User(Base):
     @property
     def level(self) -> int:
         """Calculate user level based on total XP."""
-        # Simple level calculation: every 1000 XP = 1 level
-        return (self.total_xp // 1000) + 1
+        # Simple level calculation: every XP_PER_LEVEL XP = 1 level
+        return (self.total_xp // self.XP_PER_LEVEL) + 1
 
     @property
     def xp_to_next_level(self) -> int:
         """Calculate XP needed for next level."""
         current_level = self.level
-        return current_level * 1000 - self.total_xp
+        return current_level * self.XP_PER_LEVEL - self.total_xp
 
     @property
     def progress_to_next_level(self) -> float:
@@ -134,7 +137,7 @@ class User(Base):
         xp_needed = self.xp_to_next_level
         if xp_needed == 0:
             return 1.0
-        return 1 - (xp_needed / 1000)
+        return 1 - (xp_needed / self.XP_PER_LEVEL)
 
     def add_xp(self, amount: int, source: str = "lesson") -> None:
         """Add XP and update related statistics."""

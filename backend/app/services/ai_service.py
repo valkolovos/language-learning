@@ -34,19 +34,52 @@ class AIService:
         # Initialize Google Cloud clients
         try:
             credentials, project = default()
-            self.translate_client = translate.TranslationServiceClient()
-            self.tts_client = texttospeech.TextToSpeechClient()
-            self.speech_client = speech.SpeechClient()
-
-            # Initialize Vertex AI
-            aiplatform.init(project=self.google_project, location="us-central1")
-
-            logger.info("Google Cloud AI services initialized successfully")
+            logger.info("Google Cloud credentials obtained successfully")
         except Exception as e:
-            logger.error("Failed to initialize Google Cloud AI services", error=str(e))
+            logger.error("Failed to obtain Google Cloud credentials", error=str(e))
             self.translate_client = None
             self.tts_client = None
             self.speech_client = None
+            return
+
+        # Initialize Translation Service
+        try:
+            self.translate_client = translate.TranslationServiceClient()
+            logger.info("Google Cloud Translation service initialized successfully")
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Translation service", error=str(e))
+            self.translate_client = None
+
+        # Initialize Text-to-Speech Service
+        try:
+            self.tts_client = texttospeech.TextToSpeechClient()
+            logger.info("Google Cloud Text-to-Speech service initialized successfully")
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Text-to-Speech service", error=str(e))
+            self.tts_client = None
+
+        # Initialize Speech-to-Text Service
+        try:
+            self.speech_client = speech.SpeechClient()
+            logger.info("Google Cloud Speech-to-Text service initialized successfully")
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Speech-to-Text service", error=str(e))
+            self.speech_client = None
+
+        # Initialize Vertex AI
+        try:
+            aiplatform.init(project=self.google_project, location="us-central1")
+            logger.info("Google Cloud Vertex AI initialized successfully")
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Vertex AI", error=str(e))
+
+        # Log summary of initialization status
+        services_status = {
+            "translation": self.translate_client is not None,
+            "text_to_speech": self.tts_client is not None,
+            "speech_to_text": self.speech_client is not None,
+        }
+        logger.info("Google Cloud services initialization summary", services_status=services_status)
 
         # Initialize OpenAI client
         if settings.OPENAI_API_KEY:

@@ -5,6 +5,7 @@ Core learning models for lessons, exercises, and progress tracking.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import structlog
@@ -12,6 +13,9 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+)
+from sqlalchemy import Enum as SQLAlchemyEnum
+from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
@@ -22,6 +26,34 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.core.database import Base
+
+
+class DifficultyLevel(str, Enum):
+    """Difficulty levels for lessons and exercises."""
+
+    BEGINNER = "beginner"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
+
+
+class ExerciseType(str, Enum):
+    """Types of exercises available."""
+
+    MULTIPLE_CHOICE = "multiple_choice"
+    FILL_BLANK = "fill_blank"
+    SPEAKING = "speaking"
+    LISTENING = "listening"
+    MATCHING = "matching"
+
+
+class LessonStatus(str, Enum):
+    """Status values for lesson progress."""
+
+    NOT_STARTED = "not_started"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    MASTERED = "mastered"
+
 
 if TYPE_CHECKING:
     from .user import User
@@ -38,7 +70,7 @@ class Lesson(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     target_language: Mapped[str] = mapped_column(String, nullable=False)
-    difficulty_level: Mapped[str] = mapped_column(String, nullable=False)  # beginner, intermediate, advanced
+    difficulty_level: Mapped[DifficultyLevel] = mapped_column(SQLAlchemyEnum(DifficultyLevel), nullable=False)
     category: Mapped[str] = mapped_column(String, nullable=False)  # vocabulary, grammar, conversation, culture
 
     # Content structure
@@ -62,15 +94,23 @@ class Lesson(Base):
 
     def get_difficulty_score(self) -> float:
         """Get numerical difficulty score."""
-        difficulty_map = {"beginner": 1.0, "intermediate": 2.0, "advanced": 3.0}
+        difficulty_map = {
+            DifficultyLevel.BEGINNER: 1.0,
+            DifficultyLevel.INTERMEDIATE: 2.0,
+            DifficultyLevel.ADVANCED: 3.0,
+        }
         return difficulty_map.get(self.difficulty_level, 1.0)
 
     def is_accessible_for_user(self, user_proficiency: str) -> bool:
         """Check if lesson is accessible for user's proficiency level."""
-        proficiency_order = ["beginner", "intermediate", "advanced"]
-        user_level = proficiency_order.index(user_proficiency)
-        lesson_level = proficiency_order.index(self.difficulty_level)
-        return user_level >= lesson_level
+        proficiency_order = [DifficultyLevel.BEGINNER, DifficultyLevel.INTERMEDIATE, DifficultyLevel.ADVANCED]
+        try:
+            user_level = proficiency_order.index(DifficultyLevel(user_proficiency))
+            lesson_level = proficiency_order.index(self.difficulty_level)
+            return user_level >= lesson_level
+        except ValueError:
+            # Handle case where user_proficiency is not a valid enum value
+            return False
 
 
 class Exercise(Base):
@@ -82,9 +122,7 @@ class Exercise(Base):
     lesson_id: Mapped[int] = mapped_column(Integer, ForeignKey("lessons.id"), nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    exercise_type: Mapped[str] = mapped_column(
-        String, nullable=False
-    )  # multiple_choice, fill_blank, speaking, listening
+    exercise_type: Mapped[ExerciseType] = mapped_column(SQLAlchemyEnum(ExerciseType), nullable=False)
 
     # Exercise content
     content: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)  # Exercise-specific content
@@ -137,7 +175,7 @@ class UserLessonProgress(Base):
     lesson_id: Mapped[int] = mapped_column(Integer, ForeignKey("lessons.id"), nullable=False)
 
     # Progress tracking
-    status: Mapped[str] = mapped_column(String, default="not_started")  # not_started, in_progress, completed, mastered
+    status: Mapped[LessonStatus] = mapped_column(SQLAlchemyEnum(LessonStatus), default=LessonStatus.NOT_STARTED)
     completion_percentage: Mapped[float] = mapped_column(Float, default=0.0)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
 
@@ -186,10 +224,10 @@ class UserLessonProgress(Base):
 
         # Update status
         if self.completion_percentage >= 100.0:
-            self.status = "completed"
+            self.status = LessonStatus.COMPLETED
             self.completed_at = datetime.now()
         elif self.completion_percentage > 0:
-            self.status = "in_progress"
+            self.status = LessonStatus.IN_PROGRESS
 
         self.updated_at = datetime.now()
 

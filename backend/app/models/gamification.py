@@ -29,6 +29,53 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(__name__)
 
 
+# Achievement and milestone constants
+class StreakMilestones:
+    """Constants for learning streak milestones."""
+
+    SEVEN_DAYS = 7
+    THIRTY_DAYS = 30
+    HUNDRED_DAYS = 100
+    YEAR = 365
+
+
+class AchievementNames:
+    """Constants for achievement names to maintain consistency."""
+
+    SEVEN_DAY_STREAK = "7_day_streak"
+    THIRTY_DAY_STREAK = "30_day_streak"
+    HUNDRED_DAY_STREAK = "100_day_streak"
+    YEAR_STREAK = "365_day_streak"
+
+
+class AchievementTypes:
+    """Constants for achievement types."""
+
+    STREAK = "streak"
+    XP = "xp"
+    LESSONS = "lessons"
+    EXERCISES = "exercises"
+    TIME = "time"
+
+
+class AchievementRarities:
+    """Constants for achievement rarity levels."""
+
+    COMMON = "common"
+    RARE = "rare"
+    EPIC = "epic"
+    LEGENDARY = "legendary"
+
+
+class GoalTypes:
+    """Constants for daily goal types."""
+
+    STUDY_TIME = "study_time"
+    LESSONS = "lessons"
+    EXERCISES = "exercises"
+    XP = "xp"
+
+
 class Achievement(Base):
     """Achievement model for gamification rewards."""
 
@@ -40,13 +87,13 @@ class Achievement(Base):
     icon_url: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Achievement criteria
-    achievement_type: Mapped[str] = mapped_column(String, nullable=False)  # streak, xp, lessons, exercises, time
+    achievement_type: Mapped[str] = mapped_column(String, nullable=False)
     criteria: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)  # {"threshold": 100, "timeframe": "daily"}
     xp_reward: Mapped[int] = mapped_column(Integer, default=0)
 
     # Metadata
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    rarity: Mapped[str] = mapped_column(String, default="common")  # common, rare, epic, legendary
+    rarity: Mapped[str] = mapped_column(String, default=AchievementRarities.COMMON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
     # Relationships
@@ -63,23 +110,23 @@ class Achievement(Base):
         threshold = self.criteria.get("threshold", 0)
         self.criteria.get("timeframe", "lifetime")
 
-        if self.achievement_type == "streak":
+        if self.achievement_type == AchievementTypes.STREAK:
             current_streak = user_stats.get("current_streak", 0)
             return bool(current_streak >= threshold)
 
-        elif self.achievement_type == "xp":
+        elif self.achievement_type == AchievementTypes.XP:
             total_xp = user_stats.get("total_xp", 0)
             return bool(total_xp >= threshold)
 
-        elif self.achievement_type == "lessons":
+        elif self.achievement_type == AchievementTypes.LESSONS:
             lessons_completed = user_stats.get("lessons_completed", 0)
             return bool(lessons_completed >= threshold)
 
-        elif self.achievement_type == "exercises":
+        elif self.achievement_type == AchievementTypes.EXERCISES:
             exercises_completed = user_stats.get("exercises_completed", 0)
             return bool(exercises_completed >= threshold)
 
-        elif self.achievement_type == "time":
+        elif self.achievement_type == AchievementTypes.TIME:
             total_study_time = user_stats.get("total_study_time", 0)
             return bool(total_study_time >= threshold)
 
@@ -179,21 +226,21 @@ class LearningStreak(Base):
             self.longest_streak = self.current_streak
 
         # Check milestones
-        if self.current_streak >= 7 and not self.milestone_7_days:
+        if self.current_streak >= StreakMilestones.SEVEN_DAYS and not self.milestone_7_days:
             self.milestone_7_days = True
-            achievements.append("7_day_streak")
+            achievements.append(AchievementNames.SEVEN_DAY_STREAK)
 
-        if self.current_streak >= 30 and not self.milestone_30_days:
+        if self.current_streak >= StreakMilestones.THIRTY_DAYS and not self.milestone_30_days:
             self.milestone_30_days = True
-            achievements.append("30_day_streak")
+            achievements.append(AchievementNames.THIRTY_DAY_STREAK)
 
-        if self.current_streak >= 100 and not self.milestone_100_days:
+        if self.current_streak >= StreakMilestones.HUNDRED_DAYS and not self.milestone_100_days:
             self.milestone_100_days = True
-            achievements.append("100_day_streak")
+            achievements.append(AchievementNames.HUNDRED_DAY_STREAK)
 
-        if self.current_streak >= 365 and not self.milestone_365_days:
+        if self.current_streak >= StreakMilestones.YEAR and not self.milestone_365_days:
             self.milestone_365_days = True
-            achievements.append("365_day_streak")
+            achievements.append(AchievementNames.YEAR_STREAK)
 
         self.last_study_date = study_date
         self.updated_at = datetime.now()
@@ -238,7 +285,7 @@ class DailyGoal(Base):
 
     # Goal data
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    goal_type: Mapped[str] = mapped_column(String, nullable=False)  # study_time, lessons, exercises, xp
+    goal_type: Mapped[str] = mapped_column(String, nullable=False)
     target_value: Mapped[int] = mapped_column(Integer, nullable=False)
     current_value: Mapped[int] = mapped_column(Integer, default=0)
 
