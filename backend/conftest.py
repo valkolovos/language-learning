@@ -7,18 +7,12 @@ and reduce coupling between test configuration and application models.
 
 import asyncio
 import os
-import sys
-from pathlib import Path
 from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
-
-# Add the app directory to Python path
-app_dir = Path(__file__).parent / "app"
-sys.path.insert(0, str(app_dir))
 
 from app.core.database import Base
 

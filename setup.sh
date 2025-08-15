@@ -184,7 +184,7 @@ check_just() {
         else
             # Generic Unix
             curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to ~/.local/bin
-                export PATH="$HOME/.local/bin:$PATH"
+            export PATH="$HOME/.local/bin:$PATH"
         fi
         
         # Verify installation
