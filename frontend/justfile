@@ -99,7 +99,7 @@ format-check:
 # Type checking
 type-check:
     @echo "Running TypeScript type checking..."
-    @npm run type-check
+    @npx tsc --noEmit
 
 # Run all code quality checks
 quality: lint format-check type-check
