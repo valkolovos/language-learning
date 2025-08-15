@@ -85,29 +85,26 @@ lint:
     @echo "Running ESLint..."
     @source ~/.nvm/nvm.sh && nvm use && npm run lint
 
-# Fix linting issues automatically
+# Auto-fix linting issues
 lint-fix:
-    @echo "Fixing linting issues..."
-    nvm use
-    npm run lint:fix
+    @echo "Auto-fixing linting issues..."
+    @source ~/.nvm/nvm.sh && nvm use && npm run lint:fix
+    @echo "Frontend linting issues auto-fixed! ✨"
 
 # Format code
 format:
     @echo "Formatting code with Prettier..."
-    nvm use
-    npm run format
+    @source ~/.nvm/nvm.sh && nvm use && npm run format
 
 # Check code formatting
 format-check:
     @echo "Checking code formatting..."
-    nvm use
-    npm run format -- --check
+    @source ~/.nvm/nvm.sh && nvm use && npm run format -- --check
 
 # Type checking
 type-check:
     @echo "Running TypeScript type checking..."
-    nvm use
-    npm run type-check
+    @source ~/.nvm/nvm.sh && nvm use && npm run type-check
 
 # Run all code quality checks
 quality: lint format-check type-check
@@ -116,60 +113,51 @@ quality: lint format-check type-check
 # Start storybook
 storybook:
     @echo "Starting Storybook..."
-    nvm use
-    npm run storybook
+    @source ~/.nvm/nvm.sh && nvm use && npm run storybook
 
 # Build storybook
 storybook-build:
     @echo "Building Storybook..."
-    nvm use
-    npm run build-storybook
+    @source ~/.nvm/nvm.sh && nvm use && npm run build-storybook
 
 # Start development server with HTTPS
 dev-https:
     @echo "Starting development server with HTTPS..."
-    nvm use
-    HTTPS=true npm start
+    @source ~/.nvm/nvm.sh && nvm use && HTTPS=true npm start
 
 # Start development server on specific port
 dev-port port:
     @echo "Starting development server on port {{port}}..."
-    nvm use
-    PORT={{port}} npm start
+    @source ~/.nvm/nvm.sh && nvm use && PORT={{port}} npm start
 
 # Bundle analysis
 analyze:
     @echo "Analyzing bundle..."
-    nvm use
-    npm run build
-    npx webpack-bundle-analyzer build/static/js/*.js
+    @source ~/.nvm/nvm.sh && nvm use && npm run build
+    @source ~/.nvm/nvm.sh && npx webpack-bundle-analyzer build/static/js/*.js
 
 # Performance audit
 audit:
     @echo "Running performance audit..."
-    nvm use
-    npm run build
-    npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html
+    @source ~/.nvm/nvm.sh && nvm use && npm run build
+    @source ~/.nvm/nvm.sh && npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html
 
 # Check for security vulnerabilities
 security:
     @echo "Checking for security vulnerabilities..."
-    nvm use
-    npm audit
-    npm audit --audit-level=moderate
+    @source ~/.nvm/nvm.sh && nvm use && npm audit
+    @source ~/.nvm/nvm.sh && npm audit --audit-level=moderate
 
 # Fix security vulnerabilities
 security-fix:
     @echo "Fixing security vulnerabilities..."
-    nvm use
-    npm audit fix
+    @source ~/.nvm/nvm.sh && nvm use && npm audit fix
 
 # Update dependencies
 update:
     @echo "Updating dependencies..."
-    nvm use
-    npm update
-    npm audit fix
+    @source ~/.nvm/nvm.sh && nvm use && npm update
+    @source ~/.nvm/nvm.sh && npm audit fix
 
 # Clean build artifacts
 clean:
@@ -218,33 +206,28 @@ health:
 # Show bundle size
 bundle-size:
     @echo "Analyzing bundle size..."
-    nvm use
-    npm run build
-    npx webpack-bundle-analyzer build/static/js/*.js --mode=static
+    @source ~/.nvm/nvm.sh && nvm use && npm run build
+    @source ~/.nvm/nvm.sh && npx webpack-bundle-analyzer build/static/js/*.js --mode=static
 
 # Run specific test file
 test-file file:
     @echo "Running tests in {{file}}..."
-    nvm use
-    npm test -- {{file}}
+    @source ~/.nvm/nvm.sh && nvm use && npm test -- {{file}}
 
 # Run specific test with pattern
 test-pattern pattern:
     @echo "Running tests matching pattern: {{pattern}}..."
-    nvm use
-    npm test -- --testNamePattern="{{pattern}}"
+    @source ~/.nvm/nvm.sh && nvm use && npm test -- --testNamePattern="{{pattern}}"
 
 # Run tests with specific environment
 test-env env:
     @echo "Running tests with environment: {{env}}..."
-    nvm use
-    NODE_ENV={{env}} npm test
+    @source ~/.nvm/nvm.sh && nvm use && NODE_ENV={{env}} npm test
 
 # Development server with specific host
 dev-host host:
     @echo "Starting development server on host {{host}}..."
-    nvm use
-    HOST={{host}} npm start
+    @source ~/.nvm/nvm.sh && nvm use && HOST={{host}} npm start
 
 # Help
 help:

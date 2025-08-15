@@ -2,15 +2,17 @@
 Database configuration and connection management.
 """
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.pool import NullPool
-import structlog
 from typing import AsyncGenerator
+
+import structlog
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 
 logger = structlog.get_logger(__name__)
+
 
 # Database URL conversion for async support
 def get_async_database_url() -> str:
@@ -18,6 +20,7 @@ def get_async_database_url() -> str:
     if settings.DATABASE_URL.startswith("postgresql://"):
         return settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     return settings.DATABASE_URL
+
 
 # Create async engine
 engine = create_async_engine(
@@ -78,15 +81,13 @@ async def get_test_db() -> AsyncGenerator[AsyncSession, None]:
     """Get test database session."""
     if not settings.TESTING:
         raise ValueError("Test database can only be used in testing mode")
-    
+
     test_engine = create_async_engine(
-        settings.TEST_DATABASE_URL or get_async_database_url().replace(
-            "/language_learning", "/test_language_learning"
-        ),
+        settings.TEST_DATABASE_URL or get_async_database_url().replace("/language_learning", "/test_language_learning"),
         echo=False,
         poolclass=NullPool,
     )
-    
+
     TestSessionLocal = async_sessionmaker(
         test_engine,
         class_=AsyncSession,
@@ -94,7 +95,7 @@ async def get_test_db() -> AsyncGenerator[AsyncSession, None]:
         autocommit=False,
         autoflush=False,
     )
-    
+
     async with TestSessionLocal() as session:
         try:
             yield session

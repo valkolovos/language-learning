@@ -3,24 +3,34 @@ pytest configuration and fixtures for the AI Language Learning application.
 """
 
 import asyncio
-import pytest
-import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import NullPool
-from typing import AsyncGenerator
 import os
 import sys
 from pathlib import Path
+from typing import AsyncGenerator
+
+import pytest
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 # Add the app directory to Python path
 app_dir = Path(__file__).parent / "app"
 sys.path.insert(0, str(app_dir))
 
 from app.core.database import Base
+from app.models.gamification import (
+    Achievement,
+    DailyGoal,
+    LearningStreak,
+    UserAchievement,
+)
+from app.models.learning import (
+    Exercise,
+    Lesson,
+    UserExerciseAttempt,
+    UserLessonProgress,
+)
 from app.models.user import User
-from app.models.learning import Lesson, Exercise, UserLessonProgress, UserExerciseAttempt
-from app.models.gamification import Achievement, UserAchievement, LearningStreak, DailyGoal
-
 
 # Test database configuration
 TEST_DATABASE_URL = "postgresql+asyncpg://postgres:password@localhost:5432/test_language_learning"
@@ -37,18 +47,14 @@ def event_loop():
 @pytest.fixture(scope="session")
 async def test_engine():
     """Create test database engine."""
-    engine = create_async_engine(
-        TEST_DATABASE_URL,
-        echo=False,
-        poolclass=NullPool
-    )
-    
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
+
     # Create all tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     yield engine
-    
+
     # Cleanup
     await engine.dispose()
 
@@ -63,7 +69,7 @@ async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
         autocommit=False,
         autoflush=False,
     )
-    
+
     async with TestSessionLocal() as session:
         try:
             yield session
@@ -73,11 +79,11 @@ async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture
-def test_user(test_session: AsyncSession):
+async def test_user(test_session: AsyncSession):
     """Create a test user."""
     from app.core.security import get_password_hash
-    
-    user = User(
+
+    user = User.create_user(
         email="test@example.com",
         username="testuser",
         hashed_password=get_password_hash("testpassword"),
@@ -85,17 +91,17 @@ def test_user(test_session: AsyncSession):
         last_name="User",
         native_language="en",
         target_language="es",
-        proficiency_level="beginner"
+        proficiency_level="beginner",
     )
-    
+
     test_session.add(user)
-    test_session.commit()
-    test_session.refresh(user)
+    await test_session.commit()
+    await test_session.refresh(user)
     return user
 
 
 @pytest.fixture
-def test_lesson(test_session: AsyncSession):
+async def test_lesson(test_session: AsyncSession):
     """Create a test lesson."""
     lesson = Lesson(
         title="Basic Greetings",
@@ -109,24 +115,24 @@ def test_lesson(test_session: AsyncSession):
                     "word": "hola",
                     "translation": "hello",
                     "example_sentence": "¡Hola! ¿Cómo estás?",
-                    "pronunciation": "oh-lah"
+                    "pronunciation": "oh-lah",
                 }
             ],
             "grammar_points": [],
-            "conversation_practice": []
+            "conversation_practice": [],
         },
         learning_objectives=["Learn basic greetings", "Practice pronunciation"],
-        estimated_duration=15
+        estimated_duration=15,
     )
-    
+
     test_session.add(lesson)
-    test_session.commit()
-    test_session.refresh(lesson)
+    await test_session.commit()
+    await test_session.refresh(lesson)
     return lesson
 
 
 @pytest.fixture
-def test_exercise(test_session: AsyncSession, test_lesson):
+async def test_exercise(test_session: AsyncSession, test_lesson):
     """Create a test exercise."""
     exercise = Exercise(
         lesson_id=test_lesson.id,
@@ -138,23 +144,23 @@ def test_exercise(test_session: AsyncSession, test_lesson):
             "options": ["hola", "adiós", "gracias", "por favor"],
             "correct_answer": 0,
             "hints": ["Think of a common greeting"],
-            "explanation": "'Hola' is the standard Spanish greeting for 'Hello'"
+            "explanation": "'Hola' is the standard Spanish greeting for 'Hello'",
         },
         correct_answer=0,
         hints=["Think of a common greeting"],
         explanation="'Hola' is the standard Spanish greeting for 'Hello'",
         difficulty_score=1.0,
-        base_xp=25
+        base_xp=25,
     )
-    
+
     test_session.add(exercise)
-    test_session.commit()
-    test_session.refresh(exercise)
+    await test_session.commit()
+    await test_session.refresh(exercise)
     return exercise
 
 
 @pytest.fixture
-def test_achievement(test_session: AsyncSession):
+async def test_achievement(test_session: AsyncSession):
     """Create a test achievement."""
     achievement = Achievement(
         name="First Steps",
@@ -162,59 +168,54 @@ def test_achievement(test_session: AsyncSession):
         achievement_type="lessons",
         criteria={"threshold": 1, "timeframe": "lifetime"},
         xp_reward=50,
-        rarity="common"
+        rarity="common",
     )
-    
+
     test_session.add(achievement)
-    test_session.commit()
-    test_session.refresh(achievement)
+    await test_session.commit()
+    await test_session.refresh(achievement)
     return achievement
 
 
 @pytest.fixture
-def test_learning_streak(test_session: AsyncSession, test_user):
+async def test_learning_streak(test_session: AsyncSession, test_user):
     """Create a test learning streak."""
-    streak = LearningStreak(
-        user_id=test_user.id,
-        current_streak=0,
-        longest_streak=0,
-        total_streaks=0
-    )
-    
+    streak = LearningStreak(user_id=test_user.id, current_streak=0, longest_streak=0, total_streaks=0)
+
     test_session.add(streak)
-    test_session.commit()
-    test_session.refresh(streak)
+    await test_session.commit()
+    await test_session.refresh(streak)
     return streak
 
 
 @pytest.fixture
-def test_daily_goal(test_session: AsyncSession, test_user):
+async def test_daily_goal(test_session: AsyncSession, test_user):
     """Create a test daily goal."""
     from datetime import datetime
-    
+
     goal = DailyGoal(
         user_id=test_user.id,
         date=datetime.now(),
         goal_type="study_time",
         target_value=30,
-        current_value=0
+        current_value=0,
     )
-    
+
     test_session.add(goal)
-    test_session.commit()
-    test_session.refresh(goal)
+    await test_session.commit()
+    await test_session.refresh(goal)
     return goal
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 async def setup_test_environment(test_session: AsyncSession):
     """Setup test environment before each test."""
     # Set testing environment
     os.environ["TESTING"] = "true"
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-    
+
     yield
-    
+
     # Cleanup after each test
     await test_session.rollback()
 
@@ -236,6 +237,7 @@ def pytestbdd_strict_validation():
 @pytest.fixture
 def mock_ai_service(monkeypatch):
     """Mock AI service for testing."""
+
     class MockAIService:
         async def translate_text(self, text, source_language, target_language):
             return {
@@ -243,18 +245,18 @@ def mock_ai_service(monkeypatch):
                 "source_language": source_language,
                 "target_language": target_language,
                 "confidence": 0.95,
-                "processing_time": 0.1
+                "processing_time": 0.1,
             }
-        
+
         async def text_to_speech(self, text, language_code, voice_name=None):
             return {
                 "audio_content": b"mock_audio_content",
                 "language_code": language_code,
                 "voice_name": voice_name or "default_voice",
                 "processing_time": 0.1,
-                "audio_format": "mp3"
+                "audio_format": "mp3",
             }
-        
+
         async def generate_lesson_content(self, topic, difficulty_level, target_language, native_language="en"):
             return {
                 "lesson_content": {
@@ -265,33 +267,34 @@ def mock_ai_service(monkeypatch):
                     "grammar_points": [],
                     "conversation_practice": [],
                     "cultural_notes": [],
-                    "estimated_duration": "15 minutes"
+                    "estimated_duration": "15 minutes",
                 },
                 "topic": topic,
                 "difficulty_level": difficulty_level,
                 "target_language": target_language,
-                "processing_time": 0.1
+                "processing_time": 0.1,
             }
-    
+
     return MockAIService()
 
 
 @pytest.fixture
 def mock_redis(monkeypatch):
     """Mock Redis for testing."""
+
     class MockRedis:
         async def get(self, key):
             return None
-        
+
         async def set(self, key, value, ex=None):
             return True
-        
+
         async def delete(self, key):
             return True
-        
+
         async def exists(self, key):
             return False
-    
+
     return MockRedis()
 
 
@@ -299,9 +302,10 @@ def mock_redis(monkeypatch):
 @pytest.fixture
 def user_factory(test_session: AsyncSession):
     """Factory for creating test users."""
-    def _create_user(**kwargs):
+
+    async def _create_user(**kwargs):
         from app.core.security import get_password_hash
-        
+
         user_data = {
             "email": "user@example.com",
             "username": "testuser",
@@ -309,47 +313,53 @@ def user_factory(test_session: AsyncSession):
             "native_language": "en",
             "target_language": "es",
             "proficiency_level": "beginner",
-            **kwargs
+            **kwargs,
         }
-        
-        user = User(**user_data)
+
+        user = User.create_user(**user_data)
         test_session.add(user)
-        test_session.commit()
-        test_session.refresh(user)
+        await test_session.commit()
+        await test_session.refresh(user)
         return user
-    
+
     return _create_user
 
 
 @pytest.fixture
 def lesson_factory(test_session: AsyncSession):
     """Factory for creating test lessons."""
-    def _create_lesson(**kwargs):
+
+    async def _create_lesson(**kwargs):
         lesson_data = {
             "title": "Test Lesson",
             "description": "Test lesson description",
             "target_language": "es",
             "difficulty_level": "beginner",
             "category": "vocabulary",
-            "content": {"vocabulary": [], "grammar_points": [], "conversation_practice": []},
+            "content": {
+                "vocabulary": [],
+                "grammar_points": [],
+                "conversation_practice": [],
+            },
             "learning_objectives": ["Test objective"],
             "estimated_duration": 15,
-            **kwargs
+            **kwargs,
         }
-        
+
         lesson = Lesson(**lesson_data)
         test_session.add(lesson)
-        test_session.commit()
-        test_session.refresh(lesson)
+        await test_session.commit()
+        await test_session.refresh(lesson)
         return lesson
-    
+
     return _create_lesson
 
 
 @pytest.fixture
 def exercise_factory(test_session: AsyncSession):
     """Factory for creating test exercises."""
-    def _create_exercise(lesson_id, **kwargs):
+
+    async def _create_exercise(lesson_id, **kwargs):
         exercise_data = {
             "lesson_id": lesson_id,
             "title": "Test Exercise",
@@ -360,20 +370,20 @@ def exercise_factory(test_session: AsyncSession):
                 "options": ["A", "B", "C", "D"],
                 "correct_answer": 0,
                 "hints": ["Test hint"],
-                "explanation": "Test explanation"
+                "explanation": "Test explanation",
             },
             "correct_answer": 0,
             "hints": ["Test hint"],
             "explanation": "Test explanation",
             "difficulty_score": 1.0,
             "base_xp": 25,
-            **kwargs
+            **kwargs,
         }
-        
+
         exercise = Exercise(**exercise_data)
         test_session.add(exercise)
-        test_session.commit()
-        test_session.refresh(exercise)
+        await test_session.commit()
+        await test_session.refresh(exercise)
         return exercise
-    
+
     return _create_exercise

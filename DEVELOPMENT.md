@@ -266,6 +266,19 @@ src/
 
 ## 🚀 Development Workflow
 
+### 0. Quick Start (Recommended)
+```bash
+# Start everything for development
+just start
+
+# Stop everything when done
+just stop
+
+# Or use development commands
+just dev
+just dev-stop
+```
+
 ### 1. Environment Setup
 ```bash
 # Clone repository
@@ -283,8 +296,11 @@ cd frontend && npm install
 
 ### 2. Development Mode with just
 ```bash
-# Start complete development environment
+# Start complete development environment (DB + Redis + Backend + Frontend)
 just dev
+
+# Start all services (same as just dev)
+just start
 
 # Or start services individually
 just dev-backend      # Backend only
@@ -305,13 +321,6 @@ just test-frontend    # Frontend tests only
 
 # Run tests with coverage
 just test-cov
-
-# Run specific test files
-just test-file backend/tests/test_basic.py
-just test-file frontend/src/components/__tests__/App.test.tsx
-
-# Run specific test functions
-just test-func backend/tests/test_basic.py test_settings_loaded
 ```
 
 ### 4. Code Quality with just
@@ -330,7 +339,28 @@ just quality-backend   # Backend only
 just quality-frontend  # Frontend only
 ```
 
-### 5. Development Workflow
+### 5. Service Management with just
+```bash
+# Start everything (DB + Redis + Backend + Frontend)
+just start
+
+# Stop everything
+just stop
+
+# Development mode (same as start)
+just dev
+
+# Stop just development services (keep DB running)
+just dev-stop
+
+# Check service status and health
+just status
+
+# Health check all services
+just health
+```
+
+### 6. Development Workflow
 ```bash
 # Complete development workflow
 just workflow          # Quality + tests
@@ -368,7 +398,7 @@ just ci                # Quality + tests + security
 
 ### Database Operations with just
 ```bash
-# Start database services
+# Start database services (PostgreSQL + Redis)
 just db-start
 
 # Stop database services
@@ -376,6 +406,9 @@ just db-stop
 
 # Reset database (WARNING: destroys data)
 just db-reset
+
+# Verify database health
+just verify-db-health
 
 # Wait for database to be ready
 just wait-for-db
@@ -564,7 +597,7 @@ REACT_APP_DEBUG=true npm start
 
 ### Service Management with just
 ```bash
-# Check service status
+# Check service status and health
 just status
 
 # View logs
@@ -573,8 +606,20 @@ just logs
 # Restart services
 just restart
 
-# Health check
+# Health check all services
 just health
+
+# Start everything
+just start
+
+# Stop everything
+just stop
+
+# Development mode
+just dev
+
+# Stop development services only
+just dev-stop
 ```
 
 ## 🤝 Contributing
@@ -601,6 +646,13 @@ just health
 
 ## 🆕 New Features: pytest-bdd, uv, and just
 
+### Improved Service Management
+- **Comprehensive Start/Stop**: `just start` and `just stop` now handle the entire stack
+- **Health Verification**: Automatic database health checks before starting services
+- **Development Workflow**: `just dev` and `just dev-stop` for development-specific operations
+- **Service Status**: `just status` shows comprehensive service health information
+- **Database Health**: `just verify-db-health` ensures PostgreSQL and Redis are ready
+
 ### pytest-bdd Benefits
 - **Integrated Testing**: BDD tests run with pytest
 - **Better Fixtures**: Leverage pytest's powerful fixture system
@@ -621,6 +673,9 @@ just health
 - **Cross-Platform**: Works on Windows, macOS, and Linux
 - **Documentation**: Self-documenting commands with help
 - **Integration**: Seamless integration with existing tools
+- **Health Verification**: Automatic service health checks
+- **Full Stack Management**: Start/stop entire development environment
+- **Development Workflow**: Separate commands for development vs. production
 
 ### Migration from Traditional Tools
 - **Feature Files**: Same Gherkin syntax, no changes needed
@@ -634,9 +689,11 @@ just health
 
 ### Development
 ```bash
-just dev              # Start development environment
+just dev              # Start development environment (DB + Redis + Backend + Frontend)
+just start            # Start all services (same as dev)
 just dev-backend      # Start backend only
 just dev-frontend     # Start frontend only
+just dev-stop         # Stop development services only (keep DB running)
 ```
 
 ### Testing
@@ -656,18 +713,19 @@ just lint             # Lint all code
 
 ### Database
 ```bash
-just db-start         # Start database
-just db-stop          # Stop database
+just db-start         # Start database services (PostgreSQL + Redis)
+just db-stop          # Stop database services
+just verify-db-health # Verify database health
 just migrate          # Run migrations
 ```
 
 ### Services
 ```bash
-just start            # Start all services
+just start            # Start all services (DB + Redis + Backend + Frontend)
 just stop             # Stop all services
 just restart          # Restart all services
-just status           # Show status
-just health           # Health check
+just status           # Show status and health checks
+just health           # Health check all services
 ```
 
 ### Utilities

@@ -47,6 +47,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "autoflake" },
     { name = "black" },
     { name = "flake8" },
     { name = "httpx" },
@@ -68,11 +69,18 @@ test = [
     { name = "pytest-mock" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "types-passlib" },
+    { name = "types-python-jose" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "aioredis", specifier = ">=2.0.1" },
     { name = "alembic", specifier = ">=1.12.1" },
     { name = "asyncpg", specifier = ">=0.29.0" },
+    { name = "autoflake", marker = "extra == 'dev'", specifier = ">=2.2.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.11.0" },
     { name = "celery", specifier = ">=5.3.4" },
     { name = "email-validator", specifier = ">=2.0.0" },
@@ -120,6 +128,12 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.24.0" },
 ]
 provides-extras = ["dev", "test"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "types-passlib", specifier = ">=1.7.7.20250602" },
+    { name = "types-python-jose", specifier = ">=3.5.0.20250531" },
+]
 
 [[package]]
 name = "aioredis"
@@ -222,6 +236,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ef/5f/0bf65511d4eeac3a1f41c54034a492515a707c6edbc642174ae79034d3ba/asyncpg-0.30.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:04ff0785ae7eed6cc138e73fc67b8e51d54ee7a3ce9b63666ce55a0bf095f7ba", size = 3662720, upload-time = "2024-10-20T00:30:04.501Z" },
     { url = "https://files.pythonhosted.org/packages/e7/31/1513d5a6412b98052c3ed9158d783b1e09d0910f51fbe0e05f56cc370bc4/asyncpg-0.30.0-cp313-cp313-win32.whl", hash = "sha256:ae374585f51c2b444510cdf3595b97ece4f233fde739aa14b50e0d64e8a7a590", size = 560404, upload-time = "2024-10-20T00:30:06.537Z" },
     { url = "https://files.pythonhosted.org/packages/c8/a4/cec76b3389c4c5ff66301cd100fe88c318563ec8a520e0b2e792b5b84972/asyncpg-0.30.0-cp313-cp313-win_amd64.whl", hash = "sha256:f59b430b8e27557c3fb9869222559f7417ced18688375825f8f12302c34e915e", size = 621623, upload-time = "2024-10-20T00:30:09.024Z" },
+]
+
+[[package]]
+name = "autoflake"
+version = "2.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyflakes" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2a/cb/486f912d6171bc5748c311a2984a301f4e2d054833a1da78485866c71522/autoflake-2.3.1.tar.gz", hash = "sha256:c98b75dc5b0a86459c4f01a1d32ac7eb4338ec4317a4469515ff1e687ecd909e", size = 27642, upload-time = "2024-03-13T03:41:28.977Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/ee/3fd29bf416eb4f1c5579cf12bf393ae954099258abd7bde03c4f9716ef6b/autoflake-2.3.1-py3-none-any.whl", hash = "sha256:3ae7495db9084b7b32818b4140e6dc4fc280b712fb414f5b8fe57b0a8e85a840", size = 32483, upload-time = "2024-03-13T03:41:26.969Z" },
 ]
 
 [[package]]
@@ -2380,6 +2406,36 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737, upload-time = "2024-11-24T20:12:22.481Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540, upload-time = "2024-11-24T20:12:19.698Z" },
+]
+
+[[package]]
+name = "types-passlib"
+version = "1.7.7.20250602"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/3e/501a5832130e5f93450b1e02090e2ee27a37135d11378a47debf960e3131/types_passlib-1.7.7.20250602.tar.gz", hash = "sha256:cf2350e78d36b6b09e4db44284d96651b57285f499cfabf111b616065abab7b3", size = 25406, upload-time = "2025-06-02T03:14:56.033Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/39/fc/530236c21f1a0be84c42b23c91c250ef96404c475b739ac4479430ebd7d4/types_passlib-1.7.7.20250602-py3-none-any.whl", hash = "sha256:ed73a91be9a22484ebd62cc0d127675ded542b892b99776db92dab760bbfe274", size = 40410, upload-time = "2025-06-02T03:14:54.834Z" },
+]
+
+[[package]]
+name = "types-pyasn1"
+version = "0.6.0.20250516"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/01/9b/5c6e6690da87e9fec317925d4a9500a8d61c2e2c1ec39de46736f76a29e8/types_pyasn1-0.6.0.20250516.tar.gz", hash = "sha256:1a9b35a4f033cd70c384a5043a3407b2cc07afc95900732b66e0d38426c7541d", size = 17153, upload-time = "2025-05-16T03:07:23.961Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cc/56/0d10029d4d943226f044cec3f3d1f9ad54acb4884ee0b78e5d7b66c07d9d/types_pyasn1-0.6.0.20250516-py3-none-any.whl", hash = "sha256:b9925e4e22e09eed758b93b6f2a7881b89d842c2373dd11c09b173567d170142", size = 24093, upload-time = "2025-05-16T03:07:22.759Z" },
+]
+
+[[package]]
+name = "types-python-jose"
+version = "3.5.0.20250531"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "types-pyasn1" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/89/c8/09095e22b8e5eb3992f47722a3e1b31098b55c5e8325f4b21c5f1bdcb06b/types_python_jose-3.5.0.20250531.tar.gz", hash = "sha256:dbac2bc99fbb8124068696617f8709acfe4a43d79c6df3e59800006d46d621fe", size = 11891, upload-time = "2025-05-31T03:04:29.017Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/67/33/9d8c351a44e68896a53003e00fb01e1158b9e5b68cf3b75c1e4b51eb5263/types_python_jose-3.5.0.20250531-py3-none-any.whl", hash = "sha256:1609ee4d40a8a2ef5f62fcda99ec977b2ae773dfee9355cfb7e5002afa063c55", size = 14725, upload-time = "2025-05-31T03:04:27.802Z" },
 ]
 
 [[package]]

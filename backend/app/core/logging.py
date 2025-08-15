@@ -2,25 +2,25 @@
 Structured logging configuration using structlog.
 """
 
-import sys
 import logging
+import sys
 from typing import Any, Dict
+
 import structlog
-from structlog.stdlib import LoggerFactory
-from structlog.processors import JSONRenderer, TimeStamper, StackInfoRenderer
-from structlog.stdlib import filter_by_level
+from structlog.processors import JSONRenderer, StackInfoRenderer, TimeStamper
+from structlog.stdlib import LoggerFactory, filter_by_level
 
 
 def setup_logging() -> None:
     """Configure structured logging for the application."""
-    
+
     # Configure standard library logging
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
         level=getattr(logging, "INFO"),
     )
-    
+
     # Configure structlog
     structlog.configure(
         processors=[
@@ -37,10 +37,11 @@ def setup_logging() -> None:
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-    
+
     # Set log level from settings
     try:
         from app.core.config import settings
+
         log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
         logging.getLogger().setLevel(log_level)
     except ImportError:
@@ -48,7 +49,7 @@ def setup_logging() -> None:
         logging.getLogger().setLevel(logging.INFO)
 
 
-def get_logger(name: str) -> structlog.BoundLogger:
+def get_logger(name: str) -> Any:
     """Get a structured logger instance."""
     return structlog.get_logger(name)
 
@@ -62,13 +63,7 @@ def log_context(**kwargs: Any) -> Dict[str, Any]:
 def log_request(request_id: str, method: str, url: str, **kwargs: Any) -> None:
     """Log HTTP request information."""
     logger = get_logger("http.request")
-    logger.info(
-        "HTTP request",
-        request_id=request_id,
-        method=method,
-        url=url,
-        **kwargs
-    )
+    logger.info("HTTP request", request_id=request_id, method=method, url=url, **kwargs)
 
 
 def log_response(request_id: str, status_code: int, response_time: float, **kwargs: Any) -> None:
@@ -79,19 +74,14 @@ def log_response(request_id: str, status_code: int, response_time: float, **kwar
         request_id=request_id,
         status_code=status_code,
         response_time=response_time,
-        **kwargs
+        **kwargs,
     )
 
 
 def log_user_action(user_id: str, action: str, **kwargs: Any) -> None:
     """Log user actions for analytics."""
     logger = get_logger("user.action")
-    logger.info(
-        "User action",
-        user_id=user_id,
-        action=action,
-        **kwargs
-    )
+    logger.info("User action", user_id=user_id, action=action, **kwargs)
 
 
 def log_learning_progress(user_id: str, lesson_id: str, progress: float, **kwargs: Any) -> None:
@@ -102,16 +92,11 @@ def log_learning_progress(user_id: str, lesson_id: str, progress: float, **kwarg
         user_id=user_id,
         lesson_id=lesson_id,
         progress=progress,
-        **kwargs
+        **kwargs,
     )
 
 
 def log_ai_interaction(interaction_type: str, model: str, **kwargs: Any) -> None:
     """Log AI service interactions."""
     logger = get_logger("ai.interaction")
-    logger.info(
-        "AI interaction",
-        interaction_type=interaction_type,
-        model=model,
-        **kwargs
-    )
+    logger.info("AI interaction", interaction_type=interaction_type, model=model, **kwargs)

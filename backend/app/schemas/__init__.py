@@ -1,25 +1,27 @@
-"""
-Pydantic schemas for data validation and serialization.
-"""
+"""Schemas package for the AI Language Learning application."""
 
-from .auth import UserCreate, UserLogin, Token, UserResponse
-from .user import User, UserUpdate, UserProfile
-from .lesson import Lesson, LessonCreate, LessonUpdate, LessonResponse
-from .exercise import Exercise, ExerciseCreate, ExerciseUpdate, ExerciseResponse
-from .progress import UserProgress, ProgressCreate, ProgressUpdate
-from .gamification import Achievement, UserAchievement, LearningStreak, DailyGoal
+from .auth import UserCreate, UserLogin, UserResponse, UserUpdate
+from .exercise import ExerciseCreate, ExerciseResponse, ExerciseUpdate
+from .gamification import Achievement, LearningStreak
+from .lesson import LessonCreate, LessonResponse, LessonUpdate
+from .progress import ProgressCreate, ProgressUpdate
+from .user import UserProfile, UserStats
 
 __all__ = [
-    # Auth schemas
-    "UserCreate", "UserLogin", "Token", "UserResponse",
-    # User schemas
-    "User", "UserUpdate", "UserProfile",
-    # Lesson schemas
-    "Lesson", "LessonCreate", "LessonUpdate", "LessonResponse",
-    # Exercise schemas
-    "Exercise", "ExerciseCreate", "ExerciseUpdate", "ExerciseResponse",
-    # Progress schemas
-    "UserProgress", "ProgressCreate", "ProgressUpdate",
-    # Gamification schemas
-    "Achievement", "UserAchievement", "LearningStreak", "DailyGoal",
+    "UserCreate",
+    "UserLogin",
+    "UserResponse",
+    "UserUpdate",
+    "UserProfile",
+    "UserStats",
+    "LessonCreate",
+    "LessonResponse",
+    "LessonUpdate",
+    "ExerciseCreate",
+    "ExerciseResponse",
+    "ExerciseUpdate",
+    "ProgressCreate",
+    "ProgressUpdate",
+    "Achievement",
+    "LearningStreak",
 ]

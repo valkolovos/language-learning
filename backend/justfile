@@ -101,14 +101,32 @@ format-check:
 # Linting
 lint:
     @echo "Running flake8..."
-    uv run flake8 .
+    uv run flake8 app/ tests/ features/
     @echo "Running mypy..."
-    uv run mypy .
+    uv run mypy app/ tests/ features/ --exclude=.venv
+
+# Lint only application code (exclude tests)
+lint-app:
+    @echo "Running flake8 on application code..."
+    uv run flake8 app/
+    @echo "Running mypy on application code..."
+    uv run mypy app/ --exclude=.venv
+
+# Auto-fix linting issues
+lint-fix:
+    @echo "Auto-fixing linting issues..."
+    @echo "Running autoflake to remove unused imports..."
+    uv run autoflake --in-place --remove-all-unused-imports --remove-unused-variables --recursive app/ tests/ features/
+    @echo "Running isort to organize imports..."
+    uv run isort .
+    @echo "Running black to format code..."
+    uv run black .
+    @echo "Linting issues auto-fixed! ✨"
 
 # Type checking only
 type-check:
     @echo "Running type checking..."
-    uv run mypy .
+    uv run mypy app/ tests/ features/ --exclude=.venv
 
 # Security checks
 security:

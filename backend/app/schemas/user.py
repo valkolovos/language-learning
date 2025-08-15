@@ -2,13 +2,15 @@
 User-related schemas.
 """
 
-from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class User(BaseModel):
     """Base user schema."""
+
     id: int = Field(..., description="User ID")
     email: EmailStr = Field(..., description="User's email address")
     username: str = Field(..., description="Username")
@@ -21,12 +23,12 @@ class User(BaseModel):
     created_at: datetime = Field(..., description="Account creation date")
     updated_at: Optional[datetime] = Field(None, description="Last update date")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserUpdate(BaseModel):
     """Schema for user updates."""
+
     first_name: Optional[str] = Field(None, min_length=1, max_length=100, description="First name")
     last_name: Optional[str] = Field(None, min_length=1, max_length=100, description="Last name")
     native_language: Optional[str] = Field(None, description="Native language code")
@@ -36,6 +38,7 @@ class UserUpdate(BaseModel):
 
 class UserProfile(BaseModel):
     """Schema for user profile."""
+
     id: int = Field(..., description="User ID")
     email: EmailStr = Field(..., description="User's email address")
     username: str = Field(..., description="Username")
@@ -48,12 +51,12 @@ class UserProfile(BaseModel):
     created_at: datetime = Field(..., description="Account creation date")
     updated_at: Optional[datetime] = Field(None, description="Last update date")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserStats(BaseModel):
     """Schema for user statistics."""
+
     total_lessons_completed: int = Field(default=0, description="Total lessons completed")
     total_exercises_completed: int = Field(default=0, description="Total exercises completed")
     current_streak: int = Field(default=0, description="Current learning streak")

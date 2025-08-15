@@ -4,7 +4,15 @@ Main API router for version 1 of the language learning API.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, users, lessons, exercises, progress, gamification, ai
+from app.api.v1.endpoints import (
+    ai,
+    auth,
+    exercises,
+    gamification,
+    lessons,
+    progress,
+    users,
+)
 
 api_router = APIRouter()
 

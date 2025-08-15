@@ -9,18 +9,26 @@ default:
 help:
     @echo "AI Language Learning Application - Available Commands:"
     @echo ""
-    @echo "Full Stack:"
-    @echo "  just setup        - Complete application setup"
-    @echo "  just start        - Start all services"
-    @echo "  just stop         - Stop all services"
+    @echo "Full Stack Management:"
+    @echo "  just start        - Start ALL services (DB + Redis + Backend + Frontend)"
+    @echo "  just stop         - Stop ALL services (DB + Redis + Backend + Frontend)"
     @echo "  just restart      - Restart all services"
-    @echo "  just status       - Show service status"
+    @echo "  just status       - Show service status and health checks"
     @echo "  just logs         - Show all service logs"
     @echo ""
-    @echo "Development:"
-    @echo "  just dev          - Start development environment"
-    @echo "  just dev-backend  - Start backend development server"
-    @echo "  just dev-frontend - Start frontend development server"
+    @echo "Development Environment:"
+    @echo "  just dev          - Start development environment (DB + Redis + Backend + Frontend)"
+    @echo "  just dev-stop     - Stop development services only (keep DB + Redis running)"
+    @echo "  just dev-backend  - Start backend development server only"
+    @echo "  just dev-frontend - Start frontend development server only"
+    @echo ""
+    @echo "Database Management:"
+    @echo "  just db-start     - Start database services (PostgreSQL + Redis)"
+    @echo "  just db-stop      - Stop database services"
+    @echo "  just db-reset     - Reset database (WARNING: destroys data)"
+    @echo "  just verify-db-health - Verify PostgreSQL and Redis health"
+    @echo ""
+    @echo "Testing:"
     @echo "  just test         - Run all tests"
     @echo "  just test-backend - Run backend tests"
     @echo "  just test-frontend - Run frontend tests"
@@ -30,11 +38,6 @@ help:
     @echo "  just format       - Format all code"
     @echo "  just lint         - Lint all code"
     @echo ""
-    @echo "Database:"
-    @echo "  just db-start     - Start database services"
-    @echo "  just db-stop      - Stop database services"
-    @echo "  just db-reset     - Reset database (WARNING: destroys data)"
-    @echo ""
     @echo "Node.js Management:"
     @echo "  just nvm-use      - Use Node.js version from .nvmrc"
     @echo "  just node-info    - Show Node.js version information"
@@ -43,6 +46,12 @@ help:
     @echo "  just clean        - Clean all generated files"
     @echo "  just docker       - Docker management commands"
     @echo "  just health       - Health check all services"
+    @echo ""
+    @echo "Quick Start:"
+    @echo "  just start        - Start everything for development"
+    @echo "  just stop         - Stop everything when done"
+    @echo "  just dev          - Alternative to start (same functionality)"
+    @echo "  just dev-stop     - Stop just the app services (keep DB running)"
 
 # Complete application setup
 setup:
@@ -129,15 +138,41 @@ setup-database:
     echo "-- This ensures proper schema management and version control" >> database/init/init.sql
     @echo "✅ Database initialization script created"
 
+# Verify database health
+verify-db-health:
+    @echo "Verifying database health..."
+    @echo "Checking PostgreSQL..."
+    @docker-compose exec -T postgres pg_isready -U postgres || (echo "❌ PostgreSQL is not ready" && exit 1)
+    @echo "✅ PostgreSQL is ready"
+    @echo "Checking Redis..."
+    @docker-compose exec -T redis redis-cli ping | grep -q "PONG" || (echo "❌ Redis is not responding" && exit 1)
+    @echo "✅ Redis is responding"
+    @echo "✅ Database health verification complete"
+
 # Start all services
 start:
     @echo "Starting all services..."
-    docker-compose up -d
+    @echo "Starting database services..."
+    docker-compose up -d postgres redis
+    @echo "Waiting for database services to be ready..."
+    @sleep 5
+    @just verify-db-health
+    @echo "Starting application services..."
+    @just dev-backend &
+    @just dev-frontend &
+    @echo "Waiting for application services to start..."
+    @sleep 10
+    @just status
+    @echo "✅ All services started and verified"
 
 # Stop all services
 stop:
     @echo "Stopping all services..."
+    @echo "Stopping development services..."
+    @just dev-stop
+    @echo "Stopping database services..."
     docker-compose down
+    @echo "✅ All services stopped"
 
 # Restart all services
 restart: stop start
@@ -163,7 +198,16 @@ logs-service service:
     docker-compose logs -f {{service}}
 
 # Development environment
-dev: dev-backend dev-frontend
+dev:
+    @echo "Starting development environment..."
+    @echo "Verifying database health first..."
+    @just verify-db-health
+    @echo "Starting application services..."
+    @just dev-backend &
+    @just dev-frontend &
+    @echo "Waiting for services to start..."
+    @sleep 10
+    @just status
     @echo "Development environment started! 🚀"
 
 # Start backend development server
@@ -175,6 +219,14 @@ dev-backend:
 dev-frontend:
     @echo "Starting frontend development server..."
     cd frontend && just dev
+
+# Stop development environment
+dev-stop:
+    @echo "Stopping development environment..."
+    @pkill -f "uvicorn app.main:app" || true
+    @pkill -f "npm start" || true
+    @pkill -f "react-scripts" || true
+    @echo "Development environment stopped! 🛑"
 
 # Run all tests
 test: test-backend test-frontend
@@ -218,6 +270,16 @@ quality-frontend:
     @echo "Running frontend quality checks..."
     cd frontend && just quality
 
+# Backend lint-fix
+lint-fix-backend:
+    @echo "Auto-fixing backend linting issues..."
+    cd backend && just lint-fix
+
+# Frontend lint-fix
+lint-fix-frontend:
+    @echo "Auto-fixing frontend linting issues..."
+    cd frontend && just lint-fix
+
 # Format code
 format: format-backend format-frontend
     @echo "All code formatting completed! 🎨"
@@ -235,6 +297,10 @@ format-frontend:
 # Lint code
 lint: lint-backend lint-frontend
     @echo "All code linting completed! 🔍"
+
+# Auto-fix linting issues
+lint-fix: lint-fix-backend lint-fix-frontend
+    @echo "All linting issues auto-fixed! ✨"
 
 # Lint backend code
 lint-backend:
@@ -288,7 +354,10 @@ node-info:
 db-start:
     @echo "Starting database services..."
     docker-compose up -d postgres redis
-    @echo "✅ Database services started"
+    @echo "Waiting for database services to be ready..."
+    @sleep 5
+    @just verify-db-health
+    @echo "✅ Database services started and healthy"
 
 db-stop:
     @echo "Stopping database services..."

@@ -1,130 +1,88 @@
 """
-Main FastAPI application for the AI Language Learning platform.
+Main FastAPI application.
 """
+
+from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-import structlog
-import time
-from contextlib import asynccontextmanager
 
+from app.api.v1.endpoints import (
+    ai,
+    auth,
+    exercises,
+    gamification,
+    lessons,
+    progress,
+    users,
+)
 from app.core.config import settings
 from app.core.database import init_db
-from app.api.v1.api import api_router
-from app.core.logging import setup_logging
-
-# Setup structured logging
-setup_logging()
-logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan events."""
+async def lifespan(app: FastAPI) -> Any:
+    """Application lifespan manager."""
     # Startup
-    logger.info("Starting AI Language Learning application")
     await init_db()
-    logger.info("Application startup complete")
-    
     yield
-    
     # Shutdown
-    logger.info("Shutting down AI Language Learning application")
+    # Add any cleanup code here
 
 
-def create_application() -> FastAPI:
-    """Create and configure the FastAPI application."""
-    
-    app = FastAPI(
-        title="AI Language Learning API",
-        description="AI-powered language learning platform with research-based methods",
-        version="1.0.0",
-        docs_url="/docs" if settings.DEBUG else None,
-        redoc_url="/redoc" if settings.DEBUG else None,
-        lifespan=lifespan,
+# Create FastAPI app
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.VERSION,
+    description="AI-powered language learning platform",
+    lifespan=lifespan,
+)
+
+# Add middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=settings.trusted_hosts_list,
+)
+
+
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Global exception handler."""
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
     )
-    
-    # CORS middleware
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origins_list,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    
-    # Trusted host middleware
-    app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=settings.trusted_hosts_list
-    )
-    
-    # Request logging middleware
-    @app.middleware("http")
-    async def log_requests(request: Request, call_next):
-        start_time = time.time()
-        
-        # Log request
-        logger.info(
-            "Request started",
-            method=request.method,
-            url=str(request.url),
-            client_ip=request.client.host if request.client else None,
-        )
-        
-        response = await call_next(request)
-        
-        # Log response
-        process_time = time.time() - start_time
-        logger.info(
-            "Request completed",
-            method=request.method,
-            url=str(request.url),
-            status_code=response.status_code,
-            process_time=process_time,
-        )
-        
-        return response
-    
-    # Include API router
-    app.include_router(api_router, prefix="/api/v1")
-    
-    # Health check endpoint
-    @app.get("/health")
-    async def health_check():
-        """Health check endpoint for monitoring."""
-        return {
-            "status": "healthy",
-            "version": "1.0.0",
-            "timestamp": time.time()
-        }
-    
-    # Root endpoint
-    @app.get("/")
-    async def root():
-        """Root endpoint with API information."""
-        return {
-            "message": "AI Language Learning API",
-            "version": "1.0.0",
-            "docs": "/docs",
-            "health": "/health"
-        }
-    
-    return app
 
 
-# Create the application instance
-app = create_application()
+# Include routers
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(lessons.router, prefix="/api/v1/lessons", tags=["lessons"])
+app.include_router(exercises.router, prefix="/api/v1/exercises", tags=["exercises"])
+app.include_router(progress.router, prefix="/api/v1/progress", tags=["progress"])
+app.include_router(gamification.router, prefix="/api/v1/gamification", tags=["gamification"])
+app.include_router(ai.router, prefix="/api/v1/ai", tags=["ai"])
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=settings.DEBUG,
-        log_level="info"
-    )
+@app.get("/")
+async def root() -> dict[str, str]:
+    """Root endpoint."""
+    return {"message": "AI Language Learning API"}
+
+
+@app.get("/health")
+async def health_check() -> dict[str, str]:
+    """Health check endpoint."""
+    return {"status": "healthy"}
