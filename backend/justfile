@@ -23,7 +23,8 @@ venv:
 # Run the application in development mode
 dev:
     @echo "Starting development server..."
-    uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & echo $! > .pid
+    @echo "Backend started with PID: $(cat .pid)"
 
 # Run the application in production mode
 prod:

@@ -174,8 +174,8 @@ start:
     @sleep 5
     @just verify-db-health
     @echo "Starting application services..."
-    @just dev-backend &
-    @just dev-frontend &
+    @just dev-backend
+    @just dev-frontend
     @echo "Waiting for application services to start..."
     @sleep 10
     @just status
@@ -203,6 +203,8 @@ stop:
     @just dev-stop
     @echo "Stopping database services..."
     docker-compose down
+    @echo "Cleaning up any remaining PID files..."
+    rm -f backend/.pid frontend/.pid
     @echo "✅ All services stopped"
 
 # Stop all Docker services
@@ -244,8 +246,8 @@ dev:
     @echo "Verifying database health first..."
     @just verify-db-health
     @echo "Starting application services..."
-    @just dev-backend &
-    @just dev-frontend &
+    @just dev-backend
+    @just dev-frontend
     @echo "Waiting for services to start..."
     @sleep 10
     @just status
@@ -264,10 +266,50 @@ dev-frontend:
 # Stop development environment
 dev-stop:
     @echo "Stopping development environment..."
-    @pkill -f "uvicorn app.main:app" || true
-    @pkill -f "npm start" || true
-    @pkill -f "react-scripts" || true
+    @echo "Stopping backend..."
+    @if [ -f "backend/.pid" ]; then \
+        PID=$(cat backend/.pid 2>/dev/null); \
+        if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then \
+            kill "$PID" && echo "Backend stopped (PID: $PID)" || echo "Failed to stop backend"; \
+        else \
+            echo "Backend PID file invalid or process not running"; \
+        fi; \
+        rm -f backend/.pid; \
+    else \
+        echo "No backend PID file found"; \
+    fi
+    @echo "Stopping frontend..."
+    @if [ -f "frontend/.pid" ]; then \
+        PID=$(cat frontend/.pid 2>/dev/null); \
+        if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then \
+            kill "$PID" && echo "Frontend stopped (PID: $PID)" || echo "Failed to stop frontend"; \
+        else \
+            echo "Frontend PID file invalid or process not running"; \
+        fi; \
+        rm -f frontend/.pid; \
+    else \
+        echo "No frontend PID file found"; \
+    fi
     @echo "Development environment stopped! 🛑"
+
+# Restart frontend development server
+dev-restart-frontend:
+    @echo "Restarting frontend development server..."
+    @echo "Stopping frontend..."
+    @if [ -f "frontend/.pid" ]; then \
+        PID=$(cat frontend/.pid 2>/dev/null); \
+        if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then \
+            kill "$PID" && echo "Frontend stopped (PID: $PID)" || echo "Failed to stop frontend"; \
+        else \
+            echo "Frontend PID file invalid or process not running"; \
+        fi; \
+        rm -f frontend/.pid; \
+    else \
+        echo "No frontend PID file found"; \
+    fi
+    @echo "Starting frontend..."
+    @just dev-frontend
+    @echo "Frontend restarted! 🔄"
 
 # Run all tests
 test: test-backend test-frontend
@@ -357,6 +399,7 @@ lint-frontend:
 clean:
     @echo "Cleaning generated files..."
     rm -rf logs reports
+    rm -f backend/.pid frontend/.pid
     cd backend && just clean
     cd frontend && just clean
     @echo "✅ Cleanup completed"

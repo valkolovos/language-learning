@@ -31,9 +31,9 @@ from app.core.database import Base
 class DifficultyLevel(str, Enum):
     """Difficulty levels for lessons and exercises."""
 
-    BEGINNER = "beginner"
-    INTERMEDIATE = "intermediate"
-    ADVANCED = "advanced"
+    BEGINNER = "BEGINNER"
+    INTERMEDIATE = "INTERMEDIATE"
+    ADVANCED = "ADVANCED"
 
 
 class ExerciseType(str, Enum):

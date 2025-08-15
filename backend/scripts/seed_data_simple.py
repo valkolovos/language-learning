@@ -14,7 +14,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 from app.models.gamification import Achievement
-from app.models.learning import Lesson
+from app.models.learning import DifficultyLevel, Lesson
 
 
 def create_sample_achievements(db_session):
@@ -80,7 +80,7 @@ def create_sample_lessons(db_session):
             "title": "Basic Greetings",
             "description": "Learn essential greetings in your target language",
             "target_language": "spanish",
-            "difficulty_level": "beginner",
+            "difficulty_level": DifficultyLevel.BEGINNER,
             "category": "vocabulary",
             "estimated_duration": 15,
             "content": {
@@ -93,7 +93,7 @@ def create_sample_lessons(db_session):
             "title": "Numbers 1-10",
             "description": "Learn to count from 1 to 10",
             "target_language": "spanish",
-            "difficulty_level": "beginner",
+            "difficulty_level": DifficultyLevel.BEGINNER,
             "category": "vocabulary",
             "estimated_duration": 20,
             "content": {
