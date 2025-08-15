@@ -29,6 +29,11 @@ This is a full-stack web application that:
 - User interface development
 - Gamification system
 
+**✅ CI/CD:**
+- GitHub Actions for automated testing and quality checks
+- Automated test runs on push and pull requests
+- Code quality validation (formatting, linting, type checking)
+
 ## Quick Start for Contributors
 
 ### Prerequisites
@@ -109,14 +114,37 @@ just test
 git commit -m "feat: add user progress dashboard"
 ```
 
-### 3. Code Standards
+### 3. Continuous Integration
+
+This project uses GitHub Actions for automated testing and quality checks:
+
+- **Automated Testing**: Tests run automatically on every push and pull request
+- **Quality Checks**: Code formatting, linting, and type checking are validated
+- **Database Testing**: PostgreSQL and Redis services are available in CI environment
+- **Coverage Reports**: Test coverage is tracked and reported
+
+**Workflow Files:**
+- `.github/workflows/test-and-quality.yml` - Main CI workflow (runs `just test` and `just quality`)
+- `.github/workflows/ci.yml` - Comprehensive CI pipeline with detailed job separation
+
+**Local Testing:**
+```bash
+# Test the same commands that run in CI
+just test
+just quality
+
+# Or run both together
+just test && just quality
+```
+
+### 4. Code Standards
 
 - **Python**: Follow PEP 8, use type hints, docstrings
 - **TypeScript**: Strict mode, proper typing, ESLint rules
 - **Testing**: Write tests first (BDD approach), maintain >80% coverage
 - **Commits**: Use conventional commit format (feat:, fix:, docs:, etc.)
 
-### 4. Testing Strategy
+### 5. Testing Strategy
 
 We use Behavior-Driven Development (BDD) with pytest-bdd:
 
@@ -133,7 +161,7 @@ just test-bdd          # BDD feature tests only
 just test-cov
 ```
 
-### 5. Project Structure
+### 6. Project Structure
 
 ```
 language-learning/
