@@ -16,6 +16,13 @@ from app.services.user_service import UserService
 logger = structlog.get_logger(__name__)
 
 
+def _safe_get_test_data(test_state: Dict[str, Any], key: str, default: Any = None) -> Any:
+    """Safely extract data from test state with proper error handling."""
+    if key not in test_state:
+        raise KeyError(f"Required test state key '{key}' not found. Available keys: {list(test_state.keys())}")
+    return test_state[key]
+
+
 @pytest.fixture
 def test_state() -> Dict[str, Any]:
     """Fixture for storing test state between steps."""
@@ -88,17 +95,27 @@ async def register_with_information(
 ) -> None:
     """Register with the provided information."""
     # Extract data from the table
+    if not table:
+        raise ValueError("No registration data provided in table")
+
     data = table[0]
+
+    # Validate required fields exist
+    required_fields = ["email", "username", "password", "native_language", "target_language"]
+    missing_fields = [field for field in required_fields if not data.get(field)]
+
+    if missing_fields:
+        raise ValueError(f"Missing required fields: {missing_fields}")
 
     user_data = UserCreate(
         email=data["email"],
         username=data["username"],
         password=data["password"],
-        first_name=data["first_name"],
-        last_name=data["last_name"],
+        first_name=data.get("first_name", ""),
+        last_name=data.get("last_name", ""),
         native_language=data["native_language"],
         target_language=data["target_language"],
-        proficiency_level=data["proficiency_level"],
+        proficiency_level=data.get("proficiency_level", "beginner"),
     )
 
     # Store for later verification
@@ -175,7 +192,17 @@ async def register_with_only_required_fields(
     table: List[Dict[str, str]], test_session: AsyncSession, test_state: Dict[str, Any]
 ) -> None:
     """Register with only required fields."""
+    if not table:
+        raise ValueError("No registration data provided in table")
+
     data = table[0]
+
+    # Validate required fields exist
+    required_fields = ["email", "username", "password", "native_language", "target_language"]
+    missing_fields = [field for field in required_fields if not data.get(field)]
+
+    if missing_fields:
+        raise ValueError(f"Missing required fields: {missing_fields}")
 
     user_data = UserCreate(
         email=data["email"],
@@ -220,24 +247,27 @@ async def _register_user(test_session: AsyncSession, user_data: UserCreate) -> D
 @then("the registration should be successful")
 def registration_successful(test_state: Dict[str, Any]) -> None:
     """Verify registration was successful."""
-    assert test_state["registered_user"][
-        "success"
-    ], f"Registration failed: {test_state['registered_user'].get('error', 'Unknown error')}"
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    assert registered_user["success"], f"Registration failed: {registered_user.get('error', 'Unknown error')}"
 
 
 @then("the registration should fail")
 def registration_failed(test_state: Dict[str, Any]) -> None:
     """Verify registration failed."""
-    assert not test_state["registered_user"]["success"], "Registration should have failed but succeeded"
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    assert not registered_user["success"], "Registration should have failed but succeeded"
 
 
 @then("a new user account should be created")
 def new_user_account_created(test_state: Dict[str, Any]) -> None:
     """Verify a new user account was created."""
-    assert test_state["registered_user"]["success"]
-    user = test_state["registered_user"]["user"]
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    registration_data = _safe_get_test_data(test_state, "registration_data")
+
+    assert registered_user["success"]
+    user = registered_user["user"]
     assert user.id is not None
-    assert user.email == test_state["registration_data"].email
+    assert user.email == registration_data.email
 
 
 @then("no new user account should be created")
@@ -245,24 +275,35 @@ def no_new_user_account_created(test_state: Dict[str, Any]) -> None:
     """Verify no new user account was created."""
     # This would typically check the database count
     # For now, we'll check that the registration failed
-    assert not test_state["registered_user"]["success"]
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    assert not registered_user["success"]
 
 
 @then(parsers.parse("the user should have the following attributes:\n{table}"))
 def user_has_attributes(table: List[Dict[str, str]], test_state: Dict[str, Any]) -> None:
     """Verify user has the expected attributes."""
-    assert test_state["registered_user"]["success"]
-    user = test_state["registered_user"]["user"]
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    assert registered_user["success"], "User registration must be successful to check attributes"
+    user = registered_user["user"]
 
     for row in table:
-        attribute = row["attribute"]
-        expected_value = row["value"]
+        if not row:
+            continue
+
+        attribute = row.get("attribute")
+        expected_value = row.get("value")
+
+        if not attribute:
+            continue
+
+        if not hasattr(user, attribute):
+            raise AttributeError(f"User object does not have attribute '{attribute}'")
 
         if expected_value == "null":
             assert getattr(user, attribute) is None, f"Expected {attribute} to be null"
         else:
             actual_value = getattr(user, attribute)
-            if expected_value.isdigit():
+            if expected_value and expected_value.isdigit():
                 actual_value = str(actual_value)
             assert actual_value == expected_value, f"Expected {attribute} to be {expected_value}, got {actual_value}"
 
@@ -270,11 +311,14 @@ def user_has_attributes(table: List[Dict[str, str]], test_state: Dict[str, Any])
 @then("the password should be securely hashed")
 def password_securely_hashed(test_state: Dict[str, Any]) -> None:
     """Verify password is securely hashed."""
-    assert test_state["registered_user"]["success"]
-    user = test_state["registered_user"]["user"]
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    registration_data = _safe_get_test_data(test_state, "registration_data")
+
+    assert registered_user["success"]
+    user = registered_user["user"]
 
     # Password should not be stored in plain text
-    assert user.hashed_password != test_state["registration_data"].password
+    assert user.hashed_password != registration_data.password
     # Hash should start with bcrypt identifier
     assert user.hashed_password.startswith("$2b$")
 
@@ -282,28 +326,40 @@ def password_securely_hashed(test_state: Dict[str, Any]) -> None:
 @then("the user should be marked as active")
 def user_marked_active(test_state: Dict[str, Any]) -> None:
     """Verify user is marked as active."""
-    assert test_state["registered_user"]["success"]
-    user = test_state["registered_user"]["user"]
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    assert registered_user["success"]
+    user = registered_user["user"]
     assert user.is_active is True
 
 
 @then("an error message should indicate {message}")
 def error_message_indicates(message: str, test_state: Dict[str, Any]) -> None:
     """Verify error message contains expected text."""
-    assert not test_state["registered_user"]["success"]
-    error = test_state["registered_user"].get("error", "")
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    assert not registered_user["success"]
+    error = registered_user.get("error", "")
     assert message in error, f"Expected error message '{message}' not found in '{error}'"
 
 
 @then(parsers.parse("the user should have default values:\n{table}"))
 def user_has_default_values(table: List[Dict[str, str]], test_state: Dict[str, Any]) -> None:
     """Verify user has expected default values."""
-    assert test_state["registered_user"]["success"]
-    user = test_state["registered_user"]["user"]
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    assert registered_user["success"], "User registration must be successful to check default values"
+    user = registered_user["user"]
 
     for row in table:
-        attribute = row["attribute"]
-        expected_value = row["value"]
+        if not row:
+            continue
+
+        attribute = row.get("attribute")
+        expected_value = row.get("value")
+
+        if not attribute:
+            continue
+
+        if not hasattr(user, attribute):
+            raise AttributeError(f"User object does not have attribute '{attribute}'")
 
         if expected_value == "null":
             assert getattr(user, attribute) is None, f"Expected {attribute} to be null"
@@ -319,8 +375,14 @@ def user_has_default_values(table: List[Dict[str, str]], test_state: Dict[str, A
                 else:
                     return val
 
-            converted_value = convert_value(expected_value)
-            assert actual_value == converted_value, f"Expected {attribute} to be {converted_value}, got {actual_value}"
+            if expected_value is not None:
+                converted_value = convert_value(expected_value)
+                assert (
+                    actual_value == converted_value
+                ), f"Expected {attribute} to be {converted_value}, got {actual_value}"
+            else:
+                # Handle case where expected_value is None but not "null"
+                assert actual_value is None, f"Expected {attribute} to be None, got {actual_value}"
 
 
 @then("a learning profile should be created")
@@ -328,7 +390,8 @@ def learning_profile_created(test_state: Dict[str, Any]) -> None:
     """Verify learning profile was created."""
     # This would check for related learning records
     # For now, we'll just verify the user was created
-    assert test_state["registered_user"]["success"]
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    assert registered_user["success"]
 
 
 @then("daily goals should be set up")
@@ -336,7 +399,8 @@ def daily_goals_setup(test_state: Dict[str, Any]) -> None:
     """Verify daily goals were set up."""
     # This would check for daily goal records
     # For now, we'll just verify the user was created
-    assert test_state["registered_user"]["success"]
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    assert registered_user["success"]
 
 
 @then("achievement tracking should be initialized")
@@ -344,7 +408,8 @@ def achievement_tracking_initialized(test_state: Dict[str, Any]) -> None:
     """Verify achievement tracking was initialized."""
     # This would check for achievement tracking records
     # For now, we'll just verify the user was created
-    assert test_state["registered_user"]["success"]
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    assert registered_user["success"]
 
 
 @then("the user should be ready to start learning")
@@ -352,4 +417,5 @@ def user_ready_to_learn(test_state: Dict[str, Any]) -> None:
     """Verify user is ready to start learning."""
     # This would check for all necessary setup
     # For now, we'll just verify the user was created
-    assert test_state["registered_user"]["success"]
+    registered_user = _safe_get_test_data(test_state, "registered_user")
+    assert registered_user["success"]

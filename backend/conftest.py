@@ -1,5 +1,8 @@
 """
 pytest configuration and fixtures for the AI Language Learning application.
+
+Note: Models are imported locally within fixtures to avoid circular import issues
+and reduce coupling between test configuration and application models.
 """
 
 import asyncio
@@ -18,19 +21,6 @@ app_dir = Path(__file__).parent / "app"
 sys.path.insert(0, str(app_dir))
 
 from app.core.database import Base
-from app.models.gamification import (
-    Achievement,
-    DailyGoal,
-    LearningStreak,
-    UserAchievement,
-)
-from app.models.learning import (
-    Exercise,
-    Lesson,
-    UserExerciseAttempt,
-    UserLessonProgress,
-)
-from app.models.user import User
 
 
 # Test database configuration
@@ -95,6 +85,7 @@ async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 async def test_user(test_session: AsyncSession):
     """Create a test user."""
     from app.core.security import get_password_hash
+    from app.models.user import User
 
     user = User.create_user(
         email="test@example.com",
@@ -116,6 +107,8 @@ async def test_user(test_session: AsyncSession):
 @pytest.fixture
 async def test_lesson(test_session: AsyncSession):
     """Create a test lesson."""
+    from app.models.learning import Lesson
+
     lesson = Lesson(
         title="Basic Greetings",
         description="Learn basic greetings in Spanish",
@@ -147,6 +140,8 @@ async def test_lesson(test_session: AsyncSession):
 @pytest.fixture
 async def test_exercise(test_session: AsyncSession, test_lesson):
     """Create a test exercise."""
+    from app.models.learning import Exercise
+
     exercise = Exercise(
         lesson_id=test_lesson.id,
         title="Translate Greeting",
@@ -175,6 +170,8 @@ async def test_exercise(test_session: AsyncSession, test_lesson):
 @pytest.fixture
 async def test_achievement(test_session: AsyncSession):
     """Create a test achievement."""
+    from app.models.gamification import Achievement
+
     achievement = Achievement(
         name="First Steps",
         description="Complete your first lesson",
@@ -193,6 +190,8 @@ async def test_achievement(test_session: AsyncSession):
 @pytest.fixture
 async def test_learning_streak(test_session: AsyncSession, test_user):
     """Create a test learning streak."""
+    from app.models.gamification import LearningStreak
+
     streak = LearningStreak(user_id=test_user.id, current_streak=0, longest_streak=0, total_streaks=0)
 
     test_session.add(streak)
@@ -205,6 +204,8 @@ async def test_learning_streak(test_session: AsyncSession, test_user):
 async def test_daily_goal(test_session: AsyncSession, test_user):
     """Create a test daily goal."""
     from datetime import datetime
+
+    from app.models.gamification import DailyGoal
 
     goal = DailyGoal(
         user_id=test_user.id,
@@ -315,10 +316,10 @@ def mock_redis(monkeypatch):
 @pytest.fixture
 def user_factory(test_session: AsyncSession):
     """Factory for creating test users."""
+    from app.core.security import get_password_hash
+    from app.models.user import User
 
     async def _create_user(**kwargs):
-        from app.core.security import get_password_hash
-
         user_data = {
             "email": "user@example.com",
             "username": "testuser",
@@ -341,6 +342,7 @@ def user_factory(test_session: AsyncSession):
 @pytest.fixture
 def lesson_factory(test_session: AsyncSession):
     """Factory for creating test lessons."""
+    from app.models.learning import Lesson
 
     async def _create_lesson(**kwargs):
         lesson_data = {
@@ -371,6 +373,7 @@ def lesson_factory(test_session: AsyncSession):
 @pytest.fixture
 def exercise_factory(test_session: AsyncSession):
     """Factory for creating test exercises."""
+    from app.models.learning import Exercise
 
     async def _create_exercise(lesson_id, **kwargs):
         exercise_data = {
