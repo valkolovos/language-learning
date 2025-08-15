@@ -52,6 +52,7 @@ class User(Base):
     current_streak: Mapped[int] = mapped_column(Integer, default=0)
     longest_streak: Mapped[int] = mapped_column(Integer, default=0)
     total_study_time: Mapped[int] = mapped_column(Integer, default=0)  # in minutes
+    lessons_started: Mapped[int] = mapped_column(Integer, default=0)
     lessons_completed: Mapped[int] = mapped_column(Integer, default=0)
     exercises_completed: Mapped[int] = mapped_column(Integer, default=0)
 
@@ -102,6 +103,17 @@ class User(Base):
         user.target_language = target_language
         user.proficiency_level = proficiency_level
         user.is_active = is_active
+
+        # Ensure default values are set for counters
+        user.lessons_started = 0
+        user.lessons_completed = 0
+        user.exercises_completed = 0
+        user.total_xp = 0
+        user.current_streak = 0
+        user.longest_streak = 0
+        user.total_study_time = 0
+        user.average_session_length = 0.0
+
         return user
 
     @property
@@ -167,6 +179,28 @@ class User(Base):
         if self.lessons_completed > 0:
             self.average_session_length = self.total_study_time / self.lessons_completed
 
+    def start_lesson(self) -> None:
+        """Increment lessons started counter."""
+        self.lessons_started += 1
+        self.updated_at = datetime.now()
+
+        logger.info(
+            "User started lesson",
+            user_id=self.id,
+            lessons_started=self.lessons_started,
+        )
+
+    def complete_lesson(self) -> None:
+        """Increment lessons completed counter."""
+        self.lessons_completed += 1
+        self.updated_at = datetime.now()
+
+        logger.info(
+            "User completed lesson",
+            user_id=self.id,
+            lessons_completed=self.lessons_completed,
+        )
+
     def get_learning_recommendations(self) -> Dict[str, Any]:
         """Get personalized learning recommendations."""
         recommendations = {
@@ -199,8 +233,7 @@ class User(Base):
             return 1.0
 
         # Calculate completion rate
-        lessons_started = getattr(self, "lessons_started", self.lessons_completed)
-        completion_rate = self.lessons_completed / max(1, lessons_started)
+        completion_rate = self.lessons_completed / max(1, self.lessons_started)
 
         # Calculate XP efficiency
         xp_efficiency = self.total_xp / max(1, self.total_study_time)

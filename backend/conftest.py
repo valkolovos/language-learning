@@ -32,8 +32,21 @@ from app.models.learning import (
 )
 from app.models.user import User
 
+
 # Test database configuration
-TEST_DATABASE_URL = "postgresql+asyncpg://postgres:password@localhost:5432/test_language_learning"
+def get_test_database_url():
+    """Get test database URL from environment variables with fallback defaults."""
+    return (
+        os.getenv("TEST_DATABASE_URL")
+        or f"postgresql+asyncpg://{os.getenv('TEST_DB_USER', 'postgres')}:"
+        f"{os.getenv('TEST_DB_PASSWORD', 'password')}@"
+        f"{os.getenv('TEST_DB_HOST', 'localhost')}:"
+        f"{os.getenv('TEST_DB_PORT', '5432')}/"
+        f"{os.getenv('TEST_DB_NAME', 'test_language_learning')}"
+    )
+
+
+TEST_DATABASE_URL = get_test_database_url()
 
 
 @pytest.fixture(scope="session")
