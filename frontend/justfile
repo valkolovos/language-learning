@@ -20,57 +20,38 @@ nvm-use:
 # Install dependencies
 install:
     @echo "Installing dependencies..."
-    @if command -v nvm &> /dev/null; then \
-        source ~/.nvm/nvm.sh && nvm use && npm install; \
-    else \
-        npm install; \
-    fi
+    @npm install
 
 # Install production dependencies only
 install-prod:
     @echo "Installing production dependencies..."
-    @if command -v nvm &> /dev/null; then \
-        source ~/.nvm/nvm.sh && nvm use && npm ci --only=production; \
-    else \
-        npm ci --only=production; \
-    fi
+    @npm ci --only=production
 
 # Show Node.js version info
 node-info:
     @echo "Node.js version information:"
     @echo "Current version:"
+    @node --version
+    @echo "npm version:"
+    @npm --version
     @if command -v nvm &> /dev/null; then \
-        source ~/.nvm/nvm.sh && node --version; \
-        echo "npm version:"; \
-        source ~/.nvm/nvm.sh && npm --version; \
         echo "nvm current:"; \
         source ~/.nvm/nvm.sh && nvm current; \
         echo "Available versions:"; \
         source ~/.nvm/nvm.sh && nvm list; \
     else \
-        node --version; \
-        echo "npm version:"; \
-        npm --version; \
         echo "nvm: not available"; \
     fi
 
 # Start development server
 dev:
     @echo "Starting development server..."
-    @if command -v nvm &> /dev/null; then \
-        source ~/.nvm/nvm.sh && nvm use && npm start; \
-    else \
-        npm start; \
-    fi
+    @npm start
 
 # Build for production
 build:
     @echo "Building for production..."
-    @if command -v nvm &> /dev/null; then \
-        source ~/.nvm/nvm.sh && nvm use && npm run build; \
-    else \
-        npm run build; \
-    fi
+    @npm run build
 
 # Build and analyze bundle
 build-analyze:
@@ -81,11 +62,7 @@ build-analyze:
 # Run tests
 test:
     @echo "Running tests..."
-    @if command -v nvm &> /dev/null; then \
-        source ~/.nvm/nvm.sh && nvm use && npm test -- --watchAll=false; \
-    else \
-        npm test -- --watchAll=false; \
-    fi
+    @npm test -- --watchAll=false
 
 # Run tests in watch mode
 test-watch:
@@ -95,11 +72,7 @@ test-watch:
 # Run tests with coverage
 test-cov:
     @echo "Running tests with coverage..."
-    @if command -v nvm &> /dev/null; then \
-        source ~/.nvm/nvm.sh && nvm use && npm run test:coverage; \
-    else \
-        npm run test:coverage; \
-    fi
+    @npm run test:coverage
 
 # Run E2E tests
 test-e2e:
@@ -119,11 +92,7 @@ test-e2e-browser browser:
 # Lint code
 lint:
     @echo "Running ESLint..."
-    @if command -v nvm &> /dev/null; then \
-        source ~/.nvm/nvm.sh && nvm use && npm run lint; \
-    else \
-        npm run lint; \
-    fi
+    @npm run lint
 
 # Auto-fix linting issues
 lint-fix:
@@ -139,20 +108,12 @@ format:
 # Check code formatting
 format-check:
     @echo "Checking code formatting..."
-    @if command -v nvm &> /dev/null; then \
-        source ~/.nvm/nvm.sh && nvm use && npm run format -- --check; \
-    else \
-        npm run format -- --check; \
-    fi
+    @npm run format -- --check
 
 # Type checking
 type-check:
     @echo "Running TypeScript type checking..."
-    @if command -v nvm &> /dev/null; then \
-        source ~/.nvm/nvm.sh && nvm use && npm run type-check; \
-    else \
-        npm run type-check; \
-    fi
+    @npm run type-check
 
 # Run all code quality checks
 quality: lint format-check type-check
