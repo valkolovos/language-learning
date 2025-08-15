@@ -192,3 +192,4 @@ MIT License - see LICENSE file for details
 ---
 
 **Ready to contribute?** Start by running `just setup` and exploring the codebase. Pick an issue labeled "good first issue" or suggest a new feature that aligns with the project's learning science approach.
+# Pre-commit hooks are now configured to run just quality before each commit
