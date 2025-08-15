@@ -37,14 +37,23 @@ def get_async_database_url() -> str:
 
 
 # Create async engine
-engine = create_async_engine(
-    get_async_database_url(),
-    echo=settings.DEBUG,
-    poolclass=NullPool if settings.TESTING else None,
-    pool_size=settings.DATABASE_POOL_SIZE,
-    max_overflow=settings.DATABASE_MAX_OVERFLOW,
-    pool_pre_ping=True,
-)
+if settings.TESTING:
+    # Use NullPool for testing (no connection pooling)
+    engine = create_async_engine(
+        get_async_database_url(),
+        echo=settings.DEBUG,
+        poolclass=NullPool,
+        pool_pre_ping=True,
+    )
+else:
+    # Use connection pooling for production/development
+    engine = create_async_engine(
+        get_async_database_url(),
+        echo=settings.DEBUG,
+        pool_size=settings.DATABASE_POOL_SIZE,
+        max_overflow=settings.DATABASE_MAX_OVERFLOW,
+        pool_pre_ping=True,
+    )
 
 # Create async session factory
 AsyncSessionLocal = async_sessionmaker(
