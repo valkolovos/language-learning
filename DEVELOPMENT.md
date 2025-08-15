@@ -4,6 +4,8 @@
 
 Before you can develop or run the AI Language Learning application, you need to install and configure the following tools and services:
 
+**Note**: The setup script (`./setup.sh`) will automatically handle most of the dependency installation and environment setup once these core tools are installed.
+
 ### 🐳 Core Infrastructure
 - **Docker**: Version 20.10+ for containerization
 - **Docker Compose**: Version 2.0+ for multi-container orchestration
@@ -40,6 +42,8 @@ sudo apt-get install docker.io docker-compose
 # Windows
 # Download Docker Desktop from https://www.docker.com/products/docker-desktop
 ```
+
+**Note**: Docker is required for both modes - even in local development mode, the database services (PostgreSQL and Redis) run in Docker containers for consistency and ease of setup.
 
 ### 2. Install Python 3.11+
 ```bash
@@ -101,7 +105,21 @@ curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -
 just --version
 ```
 
-### 6. Verify All Prerequisites
+### 6. Install Pre-commit Hooks (Optional but Recommended)
+```bash
+# Install pre-commit in the backend virtual environment
+cd backend && uv pip install pre-commit
+
+# Install the git hooks
+uv run pre-commit install
+
+# Go back to root directory
+cd ..
+```
+
+**Note**: Pre-commit hooks automatically run `just quality` before each commit, ensuring code quality is maintained.
+
+### 7. Verify All Prerequisites
 ```bash
 # Run the setup script to verify everything is working
 ./setup.sh
@@ -118,38 +136,96 @@ git clone <repository-url>
 cd language-learning
 ```
 
-### 2. Run Automated Setup (Recommended)
+### 2. Initial Setup (Required Once)
+The setup script (`./setup.sh`) handles the initial environment setup and must be run at least once:
+
+- **Python Dependencies**: Installs all Python packages using `uv`
+- **Node.js Dependencies**: Installs all npm packages
+- **Database Setup**: Creates database initialization scripts
+- **Nginx Configuration**: Sets up nginx configuration files
+- **Environment Verification**: Checks all prerequisites are met
+
+```bash
+# Make setup script executable
+chmod +x setup.sh
+
+# Run setup script
+./setup.sh
+```
+
+**Note**: After the initial setup, you can use `just` commands for day-to-day development without running the setup script again.
+
+### 3. Prerequisite Verification (Optional but Recommended)
+Use `just check-prerequisites` to verify your environment is ready for development:
+
+```bash
+# Check all prerequisites
+just check-prerequisites
+```
+
+This command verifies:
+- Docker and Docker Compose are available
+- Python 3.11+ is installed
+- nvm and Node.js are properly configured
+- uv package manager is available
+- just command runner is available
+
+### 4. Choose Your Development Mode
+
+#### **Option A: Docker Mode (Production-like, Easy Setup)**
 ```bash
 # Make setup script executable (if not already)
 chmod +x setup.sh
 
-# Run setup
+# Run setup - this will start everything in Docker
 ./setup.sh
 ```
 
-### 3. Manual Setup (Alternative)
+**Best for**: New developers, demos, production testing, team onboarding
+
+#### **Option B: Local Development Mode (Fast Iteration)**
 ```bash
-# Start database services
+# Verify prerequisites are met
+just check-prerequisites
+
+# Start only database services in Docker
 just db-start
 
-# Setup backend
-cd backend
-uv venv
-uv pip install -e ".[dev]"
-
-# Setup frontend
-cd ../frontend
-nvm use  # Ensures correct Node.js version
-npm install
-
-# Start development environment
+# Start local development servers
 just dev
 ```
 
+**Best for**: Active development, debugging, fast iteration, IDE integration
+
+**Note**: The setup script (`./setup.sh`) must be run at least once to install Python and Node.js dependencies. After that, use `just check-prerequisites` to verify your environment is ready for local development.
+
+
+
+### 5. Hybrid Setup (Selective Containerization)
+```bash
+# Verify prerequisites are met
+just check-prerequisites
+
+# Start database services
+just db-start
+
+# Choose which services to run locally vs. in Docker
+# Backend in Docker (production-like)
+docker-compose up -d backend
+
+# Frontend locally (fast development)
+just dev-frontend
+```
+
+**Best for**: Testing specific services in production-like conditions while keeping others local
+
+**Note**: Use `just dev-frontend` instead of manually running `npm start` to ensure consistency with the project's command structure.
+
 ## ✅ Verification
 
-After setup, verify everything is working:
+After running the setup script, verify everything is working:
 
+### **Docker Mode Verification**
 ```bash
 # Check all services
 just health
@@ -157,8 +233,55 @@ just health
 # Run tests
 just test
 
-# Start development
-just dev
+# Access the application
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:8000
+# API Docs: http://localhost:8000/docs
+```
+
+### **Local Development Mode Verification**
+```bash
+# Check database services
+just verify-db-health
+
+# Check backend (should be running on port 8000)
+curl http://localhost:8000/health
+
+# Check frontend (should be running on port 3000)
+curl http://localhost:3000
+
+# Run tests
+just test
+```
+
+**Note**: In local development mode, the frontend runs on port 3000 (not served by nginx), and the backend runs with hot reloading enabled.
+
+**Important**: The setup script must be run at least once before using local development mode to install all dependencies. Use `just check-prerequisites` to verify your environment is ready.
+
+### **Common Issues and Solutions**
+
+#### **Port Conflicts**
+```bash
+# Check what's using the ports
+lsof -i :8000  # Backend port
+lsof -i :3000  # Frontend port
+lsof -i :5432  # PostgreSQL port
+lsof -i :6379  # Redis port
+
+# Kill conflicting processes if needed
+kill -9 <PID>
+```
+
+#### **Service Not Starting**
+```bash
+# Check service status
+just status
+
+# View logs
+just logs
+
+# Restart services
+just restart
 ```
 
 ## 🆘 Troubleshooting Prerequisites
@@ -169,14 +292,14 @@ just dev
 - **Port conflicts**: Ensure ports 8000, 3000, 5432, 6379 are available
 
 ### Python Issues
-- **Wrong Python version**: Use `pyenv global 3.11.7` to set correct version
+- **Wrong Python version**: The setup script automatically handles Python version management with `uv`
 - **uv not found**: Ensure uv is in your PATH
-- **Virtual environment issues**: Delete and recreate with `uv venv`
+- **Virtual environment issues**: The setup script automatically creates and manages virtual environments
 
 ### Node.js Issues
-- **Wrong Node.js version**: Run `nvm use` to use version from `.nvmrc`
+- **Wrong Node.js version**: The setup script automatically uses the correct Node.js version from `.nvmrc`
 - **nvm not found**: Source your profile file: `source ~/.bashrc`
-- **npm install fails**: Clear cache: `npm cache clean --force`
+- **npm install fails**: The setup script handles npm installation automatically
 
 ### just Issues
 - **Command not found**: Ensure just is in your PATH
@@ -266,8 +389,17 @@ src/
 
 ## 🚀 Development Workflow
 
-### 0. Quick Start (Recommended)
+### 0. Initial Setup (One-time)
 ```bash
+# Run setup script once to install dependencies
+./setup.sh
+```
+
+### 1. Daily Development (After initial setup)
+```bash
+# Verify prerequisites (optional, but recommended)
+just check-prerequisites
+
 # Start everything for development
 just start
 
@@ -279,6 +411,152 @@ just dev
 just dev-stop
 ```
 
+**Note**: After the initial setup, you only need to use `just` commands for day-to-day development. The setup script handles dependency installation, database setup, and environment configuration.
+
+### 2. **Choosing Your Development Mode**
+
+#### **Start with Docker Mode if:**
+- 🆕 **New to the project** - Get up and running quickly
+- 🧪 **Testing integration** - Verify all services work together
+- 🎯 **Demo purposes** - Show the complete application
+- 🔄 **CI/CD validation** - Test Docker builds and deployment
+- 👥 **Team collaboration** - Ensure consistent environment
+
+#### **Switch to Local Mode when:**
+- ⚡ **Active development** - Making frequent code changes
+- 🐛 **Debugging issues** - Need to inspect variables and set breakpoints
+- 🛠️ **IDE integration** - Want full autocomplete and refactoring support
+- 🔥 **Hot reloading** - Need immediate feedback on code changes
+- 💻 **Resource constraints** - Running on lower-end machines
+
+#### **Use Hybrid Mode for:**
+- 🎭 **Selective testing** - Test specific services in production-like conditions
+- 🚀 **Performance testing** - Test backend performance while keeping frontend fast
+- 🔧 **Service debugging** - Debug one service locally while others run in containers
+
+## 🐳 Two Ways to Run the Application
+
+The AI Language Learning application can be run in two different modes, each with its own advantages and use cases:
+
+### 1. **Docker Mode (Production-like Environment)**
+```bash
+# Start all services in Docker containers
+just start
+
+# Or use the setup script
+./setup.sh
+```
+
+**What this does:**
+- Runs PostgreSQL, Redis, Backend, and Frontend in Docker containers
+- Uses production Docker images with nginx serving the frontend
+- Backend runs with uvicorn in production mode
+- All services are containerized and isolated
+
+**When to use Docker mode:**
+- ✅ **Testing production-like environment** - Mimics how the app will run in production
+- ✅ **Full-stack integration testing** - Test the complete system end-to-end
+- ✅ **Demo purposes** - Show stakeholders the complete application
+- ✅ **CI/CD testing** - Verify Docker builds and container orchestration
+- ✅ **Team onboarding** - New developers can run the app without local setup
+- ✅ **Database persistence** - Data persists between restarts
+- ✅ **Consistent environment** - Same behavior across different machines
+
+**Limitations:**
+- ❌ **Slower development cycle** - Need to rebuild containers for code changes
+- ❌ **Resource intensive** - Uses more memory and CPU
+- ❌ **Less debugging** - Harder to attach debuggers or inspect running processes
+- ❌ **Hot reload limited** - Backend has basic reload, frontend requires container rebuild
+
+### 2. **Local Development Mode (Fast Iteration)**
+```bash
+# Start only database services in Docker
+just db-start
+
+# Start backend development server locally
+just dev-backend
+
+# Start frontend development server locally  
+just dev-frontend
+
+# Or start both together
+just dev
+```
+
+**What this does:**
+- Database services (PostgreSQL, Redis) run in Docker containers
+- Backend runs locally with `uvicorn --reload` for hot reloading
+- Frontend runs locally with `npm start` for hot reloading
+- Your local code changes are immediately reflected
+
+**When to use Local mode:**
+- ✅ **Fast development iteration** - Code changes are reflected immediately
+- ✅ **Debugging** - Easy to attach debuggers, set breakpoints, inspect variables
+- ✅ **IDE integration** - Full IDE support for autocomplete, refactoring, etc.
+- ✅ **Resource efficient** - Uses less memory and CPU
+- ✅ **Hot reloading** - Both frontend and backend reload automatically
+- ✅ **Local file access** - Easy to access local files, environment variables
+- ✅ **Development tools** - Full access to development tools and extensions
+
+**Limitations:**
+- ❌ **Local setup required** - Need Python, Node.js, and dependencies installed
+- ❌ **Environment differences** - May behave differently than production
+- ❌ **Port conflicts** - Need to ensure ports 8000, 3000, 5432, 6379 are available
+- ❌ **Dependency management** - Need to manage Python and Node.js versions locally
+
+### 3. **Hybrid Mode (Best of Both Worlds)**
+```bash
+# Start database services
+just db-start
+
+# Start backend in Docker (for production-like testing)
+docker-compose up -d backend
+
+# Start frontend locally (for fast UI development)
+just dev-frontend
+```
+
+**When to use Hybrid mode:**
+- ✅ **Backend production testing** - Test backend in production-like environment
+- ✅ **Frontend fast iteration** - Quick UI/UX development and testing
+- ✅ **Selective containerization** - Choose which services to containerize
+- ✅ **Performance testing** - Test backend performance in production-like conditions
+
+## 🔄 Switching Between Modes
+
+### From Docker to Local Mode
+```bash
+# Stop all Docker services
+just stop
+
+# Start only database services
+just db-start
+
+# Start local development servers
+just dev
+```
+
+### From Local to Docker Mode
+```bash
+# Stop local development servers
+just dev-stop
+
+# Start all Docker services
+just start
+```
+
+### Clean Slate
+```bash
+# Stop everything and clean up
+just stop
+docker-compose down -v
+
+# Start fresh (choose your mode)
+just start    # Docker mode
+# OR
+just dev      # Local mode
+```
+
 ### 1. Environment Setup
 ```bash
 # Clone repository
@@ -288,8 +566,8 @@ cd language-learning
 # Run setup script (recommended)
 ./setup.sh
 
-# Or manual setup
-docker-compose up -d
+# Or manual setup (if you prefer more control)
+just db-start
 cd backend && uv venv && uv pip install -e ".[dev]"
 cd frontend && npm install
 ```
@@ -338,6 +616,8 @@ just lint
 just quality-backend   # Backend only
 just quality-frontend  # Frontend only
 ```
+
+**Pre-commit Hooks**: The project is configured with pre-commit hooks that automatically run `just quality` before each commit. This ensures code quality is maintained and prevents commits with formatting, linting, or type checking issues.
 
 ### 5. Service Management with just
 ```bash
@@ -579,7 +859,26 @@ just logs-service backend
 
 ## 🚧 Troubleshooting
 
-### Common Issues
+### **Mode-Specific Issues**
+
+#### **Docker Mode Issues**
+1. **Container not starting**: Check Docker logs with `docker-compose logs <service>`
+2. **Port conflicts**: Ensure ports 8000, 3000, 5432, 6379 are available
+3. **Memory issues**: Increase Docker memory allocation in Docker Desktop
+4. **Build failures**: Clean and rebuild with `docker-compose build --no-cache`
+
+#### **Local Development Mode Issues**
+1. **Python version**: Ensure `uv` is using Python 3.11+ (`uv python list`)
+2. **Node.js version**: Use `nvm use` to get correct version from `.nvmrc`
+3. **Dependencies**: Reinstall with `uv pip install -e ".[dev]"` and `npm install`
+4. **Virtual environment**: Recreate with `uv venv` if corrupted
+
+#### **Hybrid Mode Issues**
+1. **Service conflicts**: Ensure services aren't running in both modes simultaneously
+2. **Port mapping**: Check that Docker and local services use different ports
+3. **Environment variables**: Verify `.env` files are properly configured
+
+### **General Issues**
 1. **Database Connection**: Check PostgreSQL service and credentials
 2. **Redis Connection**: Verify Redis service and configuration
 3. **Google Cloud**: Validate service account and API permissions
@@ -735,4 +1034,26 @@ just help             # Show all commands
 just info             # Show application info
 ```
 
+## 📋 Summary: Development Workflow
+
+### **Initial Setup (One-time)**
+1. Install core prerequisites (Docker, uv, nvm, just)
+2. Clone the repository
+3. Run `./setup.sh` to install dependencies and configure environment
+
+### **Daily Development**
+- **Prerequisite Check**: `just check-prerequisites` (verify environment)
+- **Docker Mode**: `just start-docker` (production-like environment)
+- **Local Mode**: `just start` (fast iteration with hot reloading)
+- **Database Management**: `just db-start`, `just db-seed`
+- **Testing**: `just test`, `just quality`
+- **Service Management**: `just status`, `just logs`
+
+### **Key Points**
+- The setup script handles dependency installation automatically
+- Use `just` commands for day-to-day development
+- Choose between Docker and Local modes based on your needs
+- Database services always run in Docker for consistency
+
 This development guide provides a comprehensive overview of the AI Language Learning application architecture, development workflow, and best practices. Follow these guidelines to ensure consistent, high-quality development and maintainability.
+
