@@ -1,0 +1,12 @@
+repos:
+  - repo: local
+    hooks:
+      - id: just-quality
+        name: Run just quality
+        entry: just quality
+        language: system
+        types: [python, javascript]
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+        description: "Run all quality checks (formatting, linting, type checking) before commit"
