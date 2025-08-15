@@ -2,12 +2,20 @@
 # Run with: just <command> or just --list to see all commands
 
 # Helper function to run npm commands with proper Node.js version
-# This works in both local (with nvm) and CI (without nvm) environments
+# This follows a robust order of operations:
+# 1. Check if current node version is appropriate (>= .nvmrc)
+# 2. If not, check if nvm is available and execute `nvm use`
+# 3. If nvm isn't available, source ~/.nvm/nvm.sh and try `nvm use` again
 run-npm command:
-    @if command -v nvm &> /dev/null; then \
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        npm {{command}}; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
         nvm use && npm {{command}}; \
     else \
-        npm {{command}}; \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && npm {{command}}; \
     fi
 
 # Default command - show help
@@ -65,15 +73,25 @@ build:
 # Build and analyze bundle
 build-analyze:
     @echo "Building and analyzing bundle..."
-    @if command -v nvm &> /dev/null; then \
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        npm run build; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
         nvm use && npm run build; \
     else \
-        npm run build; \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && npm run build; \
     fi
-    @if command -v nvm &> /dev/null; then \
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        npx webpack-bundle-analyzer build/static/js/*.js; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
         nvm use && npx webpack-bundle-analyzer build/static/js/*.js; \
     else \
-        npx webpack-bundle-analyzer build/static/js/*.js; \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && npx webpack-bundle-analyzer build/static/js/*.js; \
     fi
 
 # Run tests
@@ -84,10 +102,15 @@ test:
 # Run tests in watch mode
 test-watch:
     @echo "Running tests in watch mode..."
-    @if command -v nvm &> /dev/null; then \
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        npm test -- --watch; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
         nvm use && npm test -- --watch; \
     else \
-        npm test -- --watch; \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && npm test -- --watch; \
     fi
 
 # Run tests with coverage
@@ -98,25 +121,35 @@ test-cov:
 # Run E2E tests
 test-e2e:
     @echo "Running E2E tests..."
-    @if command -v nvm &> /dev/null; then \
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        npm run test:e2e; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
         nvm use && npm run test:e2e; \
     else \
-        npm run test:e2e; \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && npm run test:e2e; \
     fi
 
 # Run E2E tests in headed mode
 test-e2e-headed:
     @echo "Running E2E tests in headed mode..."
-    @if command -v nvm &> /dev/null; then \
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        npm run test:e2e -- --headed; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
         nvm use && npm run test:e2e -- --headed; \
     else \
-        npm run test:e2e -- --headed; \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && npm run test:e2e -- --headed; \
     fi
 
 # Run E2E tests with specific browser
 test-e2e-browser browser:
     @echo "Running E2E tests with {{browser}}..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run test:e2e -- --project={{browser}}
+    @just run-npm "run test:e2e -- --project={{browser}}"
 
 # Lint code
 lint:
@@ -161,39 +194,59 @@ storybook-build:
 # Start development server with HTTPS
 dev-https:
     @echo "Starting development server with HTTPS..."
-    @if command -v nvm &> /dev/null; then \
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        HTTPS=true npm start; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
         nvm use && HTTPS=true npm start; \
     else \
-        HTTPS=true npm start; \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && HTTPS=true npm start; \
     fi
 
 # Start development server on specific port
 dev-port port:
     @echo "Starting development server on port {{port}}..."
-    @if command -v nvm &> /dev/null; then \
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        PORT={{port}} npm start; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
         nvm use && PORT={{port}} npm start; \
     else \
-        PORT={{port}} npm start; \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && PORT={{port}} npm start; \
     fi
 
 # Bundle analysis
 analyze:
     @echo "Analyzing bundle..."
     @just run-npm "run build"
-    @if command -v nvm &> /dev/null; then \
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        npx webpack-bundle-analyzer build/static/js/*.js; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
         nvm use && npx webpack-bundle-analyzer build/static/js/*.js; \
     else \
-        npx webpack-bundle-analyzer build/static/js/*.js; \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && npx webpack-bundle-analyzer build/static/js/*.js; \
     fi
 
 # Performance audit
 audit:
     @echo "Running performance audit..."
     @just run-npm "run build"
-    @if command -v nvm &> /dev/null; then \
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
         nvm use && npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html; \
     else \
-        npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html; \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html; \
     fi
 
 # Check for security vulnerabilities
@@ -260,28 +313,55 @@ health:
 # Show bundle size
 bundle-size:
     @echo "Analyzing bundle size..."
-    @source ~/.nvm/nvm.sh && nvm use && npm run build
-    @source ~/.nvm/nvm.sh && npx webpack-bundle-analyzer build/static/js/*.js --mode=static
+    @just run-npm "run build"
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        npx webpack-bundle-analyzer build/static/js/*.js --mode=static; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
+        nvm use && npx webpack-bundle-analyzer build/static/js/*.js --mode=static; \
+    else \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && npx webpack-bundle-analyzer build/static/js/*.js --mode=static; \
+    fi
 
 # Run specific test file
 test-file file:
     @echo "Running tests in {{file}}..."
-    @source ~/.nvm/nvm.sh && nvm use && npm test -- {{file}}
+    @just run-npm "test -- {{file}}"
 
 # Run specific test with pattern
 test-pattern pattern:
     @echo "Running tests matching pattern: {{pattern}}..."
-    @source ~/.nvm/nvm.sh && nvm use && npm test -- --testNamePattern="{{pattern}}"
+    @just run-npm "test -- --testNamePattern={{pattern}}"
 
 # Run tests with specific environment
 test-env env:
     @echo "Running tests with environment: {{env}}..."
-    @source ~/.nvm/nvm.sh && nvm use && NODE_ENV={{env}} npm test
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        NODE_ENV={{env}} npm test; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
+        nvm use && NODE_ENV={{env}} npm test; \
+    else \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && NODE_ENV={{env}} npm test; \
+    fi
 
 # Development server with specific host
 dev-host host:
     @echo "Starting development server on host {{host}}..."
-    @source ~/.nvm/nvm.sh && nvm use && HOST={{host}} npm start
+    @if node --version | grep -q "v18.20.0"; then \
+        echo "Using current Node.js version (18.20.0)"; \
+        HOST={{host}} npm start; \
+    elif command -v nvm &> /dev/null; then \
+        echo "Switching to Node.js 18.20.0 via nvm"; \
+        nvm use && HOST={{host}} npm start; \
+    else \
+        echo "Sourcing nvm and switching to Node.js 18.20.0"; \
+        source ~/.nvm/nvm.sh && nvm use && HOST={{host}} npm start; \
+    fi
 
 # Help
 help:
