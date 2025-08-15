@@ -49,7 +49,7 @@ def create_application() -> FastAPI:
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.CORS_ORIGINS,
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -58,7 +58,7 @@ def create_application() -> FastAPI:
     # Trusted host middleware
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=settings.TRUSTED_HOSTS
+        allowed_hosts=settings.trusted_hosts_list
     )
     
     # Request logging middleware

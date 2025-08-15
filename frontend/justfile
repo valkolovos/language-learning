@@ -5,97 +5,85 @@
 default:
     @just --list
 
+# Source nvm and use correct Node.js version
+nvm-use:
+    @echo "Using Node.js version from .nvmrc..."
+    @source ~/.nvm/nvm.sh && nvm use
+    @echo "Current Node.js version:"
+    @source ~/.nvm/nvm.sh && node --version
+
 # Install dependencies
 install:
     @echo "Installing dependencies..."
-    nvm use
-    npm install
+    @source ~/.nvm/nvm.sh && nvm use && npm install
 
 # Install production dependencies only
 install-prod:
     @echo "Installing production dependencies..."
-    nvm use
-    npm ci --only=production
-
-# Ensure correct Node.js version
-nvm-use:
-    @echo "Using Node.js version from .nvmrc..."
-    nvm use
-    @echo "Current Node.js version:"
-    node --version
+    @source ~/.nvm/nvm.sh && nvm use && npm ci --only=production
 
 # Show Node.js version info
 node-info:
     @echo "Node.js version information:"
     @echo "Current version:"
-    node --version
+    @source ~/.nvm/nvm.sh && node --version
     @echo "npm version:"
-    npm --version
+    @source ~/.nvm/nvm.sh && npm --version
     @echo "nvm current:"
-    nvm current
+    @source ~/.nvm/nvm.sh && nvm current
     @echo "Available versions:"
-    nvm list
+    @source ~/.nvm/nvm.sh && nvm list
 
 # Start development server
 dev:
     @echo "Starting development server..."
-    nvm use
-    npm start
+    @source ~/.nvm/nvm.sh && nvm use && npm start
 
 # Build for production
 build:
     @echo "Building for production..."
-    nvm use
-    npm run build
+    @source ~/.nvm/nvm.sh && nvm use && npm run build
 
 # Build and analyze bundle
 build-analyze:
     @echo "Building and analyzing bundle..."
-    nvm use
-    npm run build
-    npx webpack-bundle-analyzer build/static/js/*.js
+    @source ~/.nvm/nvm.sh && nvm use && npm run build
+    @source ~/.nvm/nvm.sh && npx webpack-bundle-analyzer build/static/js/*.js
 
 # Run tests
 test:
     @echo "Running tests..."
-    nvm use
-    npm test
+    @source ~/.nvm/nvm.sh && nvm use && npm test -- --watchAll=false
 
 # Run tests in watch mode
 test-watch:
     @echo "Running tests in watch mode..."
-    nvm use
-    npm test -- --watch
+    @source ~/.nvm/nvm.sh && nvm use && npm test -- --watch
 
 # Run tests with coverage
 test-cov:
     @echo "Running tests with coverage..."
-    nvm use
-    npm run test:coverage
+    @source ~/.nvm/nvm.sh && nvm use && npm run test:coverage
 
 # Run E2E tests
 test-e2e:
     @echo "Running E2E tests..."
-    nvm use
-    npm run test:e2e
+    @source ~/.nvm/nvm.sh && nvm use && npm run test:e2e
 
 # Run E2E tests in headed mode
 test-e2e-headed:
     @echo "Running E2E tests in headed mode..."
-    nvm use
-    npm run test:e2e -- --headed
+    @source ~/.nvm/nvm.sh && nvm use && npm run test:e2e -- --headed
 
 # Run E2E tests with specific browser
 test-e2e-browser browser:
     @echo "Running E2E tests with {{browser}}..."
-    nvm use
-    npm run test:e2e -- --project={{browser}}
+    @source ~/.nvm/nvm.sh && nvm use && npm run test:e2e -- --project={{browser}}
 
 # Lint code
 lint:
     @echo "Running ESLint..."
-    nvm use
-    npm run lint
+    @source ~/.nvm/nvm.sh && nvm use && npm run lint
 
 # Fix linting issues automatically
 lint-fix:

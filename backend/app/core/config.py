@@ -2,8 +2,8 @@
 Application configuration using Pydantic settings.
 """
 
-from typing import List, Optional
-from pydantic import Field
+from typing import List, Optional, Union
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -25,14 +25,14 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
     
     # CORS - Origins for CORS middleware
-    CORS_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8000"],
+    CORS_ORIGINS: str = Field(
+        default="http://localhost:3000,http://localhost:8000",
         env="CORS_ORIGINS"
     )
     
     # Trusted Hosts - Hostnames for TrustedHostMiddleware
-    TRUSTED_HOSTS: List[str] = Field(
-        default=["localhost", "127.0.0.1", "0.0.0.0"],
+    TRUSTED_HOSTS: str = Field(
+        default="localhost,127.0.0.1,0.0.0.0",
         env="TRUSTED_HOSTS"
     )
     
@@ -54,8 +54,8 @@ class Settings(BaseSettings):
     AI_MODEL_NAME: str = Field(default="gpt-4", env="AI_MODEL_NAME")
     
     # Learning Engine - Using default values to avoid parsing issues
-    SPACED_REPETITION_INTERVALS: List[int] = Field(
-        default=[1, 3, 7, 14, 30, 90, 180, 365],
+    SPACED_REPETITION_INTERVALS: str = Field(
+        default="1,3,7,14,30,90,180,365",
         env="SPACED_REPETITION_INTERVALS"
     )
     MAX_DAILY_LESSONS: int = Field(default=5, env="MAX_DAILY_LESSONS")
@@ -78,6 +78,27 @@ class Settings(BaseSettings):
     TESTING: bool = Field(default=False, env="TESTING")
     TEST_DATABASE_URL: Optional[str] = Field(default=None, env="TEST_DATABASE_URL")
     
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Get CORS origins as a list."""
+        if isinstance(self.CORS_ORIGINS, str):
+            return [item.strip() for item in self.CORS_ORIGINS.split(',') if item.strip()]
+        return self.CORS_ORIGINS
+    
+    @property
+    def trusted_hosts_list(self) -> List[str]:
+        """Get trusted hosts as a list."""
+        if isinstance(self.TRUSTED_HOSTS, str):
+            return [item.strip() for item in self.TRUSTED_HOSTS.split(',') if item.strip()]
+        return self.TRUSTED_HOSTS
+    
+    @property
+    def spaced_repetition_intervals_list(self) -> List[int]:
+        """Get spaced repetition intervals as a list of integers."""
+        if isinstance(self.SPACED_REPETITION_INTERVALS, str):
+            return [int(item.strip()) for item in self.SPACED_REPETITION_INTERVALS.split(',') if item.strip()]
+        return self.SPACED_REPETITION_INTERVALS
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
@@ -98,6 +119,7 @@ if settings.DEBUG:
         "http://localhost:8000"
     ]
     # Combine with existing hosts
-    existing_hosts = settings.CORS_ORIGINS
+    existing_hosts = settings.cors_origins_list
     all_hosts = existing_hosts + additional_hosts
-    settings.CORS_ORIGINS = all_hosts
+    # Update the CORS_ORIGINS string with the combined hosts
+    settings.CORS_ORIGINS = ",".join(all_hosts)

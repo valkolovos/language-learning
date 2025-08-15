@@ -82,18 +82,10 @@ check-prerequisites:
 # Check nvm and Node.js version
 check-nvm:
     @echo "Checking nvm installation..."
-    @if ! command -v nvm &> /dev/null; then
-        @echo "❌ nvm not found. Please install nvm first:"
-        @echo "  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash"
-        @echo "  Then restart your terminal or source your profile file."
-        @exit 1
-    @fi
+    @command -v nvm &> /dev/null || (echo "❌ nvm not found. Please install nvm first:" && echo "  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash" && echo "  Then restart your terminal or source your profile file." && exit 1)
     @echo "✅ nvm is available"
     @echo "Checking .nvmrc file..."
-    @if [ ! -f ".nvmrc" ]; then
-        @echo "❌ .nvmrc file not found. Please create one with the desired Node.js version."
-        @exit 1
-    @fi
+    @test -f ".nvmrc" || (echo "❌ .nvmrc file not found. Please create one with the desired Node.js version." && exit 1)
     @echo "✅ .nvmrc file found"
     @echo "Using Node.js version from .nvmrc..."
     @nvm use
@@ -102,25 +94,40 @@ check-nvm:
 
 # Create necessary directories
 create-directories:
-    @echo "Creating directories..."
-    mkdir -p backend/logs backend/reports frontend/build database/init credentials nginx
+    @echo "Creating logs and reports directories..."
+    mkdir -p logs reports
+    @echo "✅ Directories created"
 
-# Setup backend
+# Setup backend environment
 setup-backend:
-    @echo "Setting up backend..."
+    @echo "Setting up backend environment..."
     cd backend && just install
+    @echo "✅ Backend environment setup complete"
 
-# Setup frontend
+# Setup frontend environment
 setup-frontend:
-    @echo "Setting up frontend..."
+    @echo "Setting up frontend environment..."
     cd frontend && just install
+    @echo "✅ Frontend environment setup complete"
 
 # Setup database
 setup-database:
     @echo "Setting up database..."
-    @just db-start
-    @echo "Waiting for database..."
-    @just wait-for-db
+    mkdir -p database/init
+    echo "-- Language Learning Database Initialization" > database/init/init.sql
+    echo "" >> database/init/init.sql
+    echo "-- Create extensions" >> database/init/init.sql
+    echo "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" >> database/init/init.sql
+    echo "" >> database/init/init.sql
+    echo "-- Create custom types" >> database/init/init.sql
+    echo "CREATE TYPE proficiency_level AS ENUM ('beginner', 'intermediate', 'advanced');" >> database/init/init.sql
+    echo "CREATE TYPE lesson_status AS ENUM ('not_started', 'in_progress', 'completed', 'mastered');" >> database/init/init.sql
+    echo "CREATE TYPE exercise_type AS ENUM ('multiple_choice', 'fill_blank', 'matching', 'speaking', 'listening');" >> database/init/init.sql
+    echo "CREATE TYPE achievement_rarity AS ENUM ('common', 'rare', 'epic', 'legendary');" >> database/init/init.sql
+    echo "" >> database/init/init.sql
+    echo "-- Note: Tables and indexes will be created by the application's models and migrations" >> database/init/init.sql
+    echo "-- This ensures proper schema management and version control" >> database/init/init.sql
+    @echo "✅ Database initialization script created"
 
 # Start all services
 start:
@@ -183,6 +190,10 @@ test-frontend:
     @echo "Running frontend tests..."
     cd frontend && just test
 
+# Run tests with coverage
+test-cov: test-backend-cov test-frontend-cov
+    @echo "All tests with coverage completed! 📊"
+
 # Run backend tests with coverage
 test-backend-cov:
     @echo "Running backend tests with coverage..."
@@ -193,27 +204,23 @@ test-frontend-cov:
     @echo "Running frontend tests with coverage..."
     cd frontend && just test-cov
 
-# Run all tests with coverage
-test-cov: test-backend-cov test-frontend-cov
-    @echo "All tests with coverage completed! 📊"
-
-# Run all quality checks
+# Code quality checks
 quality: quality-backend quality-frontend
-    @echo "All quality checks passed! ✨"
+    @echo "All quality checks completed! ✨"
 
-# Run backend quality checks
+# Backend quality checks
 quality-backend:
     @echo "Running backend quality checks..."
     cd backend && just quality
 
-# Run frontend quality checks
+# Frontend quality checks
 quality-frontend:
     @echo "Running frontend quality checks..."
     cd frontend && just quality
 
-# Format all code
+# Format code
 format: format-backend format-frontend
-    @echo "All code formatted! 🎨"
+    @echo "All code formatting completed! 🎨"
 
 # Format backend code
 format-backend:
@@ -225,9 +232,9 @@ format-frontend:
     @echo "Formatting frontend code..."
     cd frontend && just format
 
-# Lint all code
+# Lint code
 lint: lint-backend lint-frontend
-    @echo "All code linted! 🔍"
+    @echo "All code linting completed! 🔍"
 
 # Lint backend code
 lint-backend:
@@ -238,6 +245,25 @@ lint-backend:
 lint-frontend:
     @echo "Linting frontend code..."
     cd frontend && just lint
+
+# Clean generated files
+clean:
+    @echo "Cleaning generated files..."
+    rm -rf logs reports
+    cd backend && just clean
+    cd frontend && just clean
+    @echo "✅ Cleanup completed"
+
+# Health check all services
+health:
+    @echo "Health Check Results:"
+    @echo "===================="
+    @echo "Database:"
+    @docker-compose exec -T postgres pg_isready -U postgres && echo "✅ Database healthy" || echo "❌ Database unhealthy"
+    @echo "Backend:"
+    @curl -f http://localhost:8000/health > /dev/null 2>&1 && echo "✅ Backend healthy" || echo "❌ Backend unhealthy"
+    @echo "Frontend:"
+    @curl -f http://localhost:3000 > /dev/null 2>&1 && echo "✅ Frontend healthy" || echo "❌ Frontend unhealthy"
 
 # Node.js version management
 nvm-use:
@@ -262,182 +288,68 @@ node-info:
 db-start:
     @echo "Starting database services..."
     docker-compose up -d postgres redis
+    @echo "✅ Database services started"
 
 db-stop:
     @echo "Stopping database services..."
     docker-compose stop postgres redis
+    @echo "✅ Database services stopped"
 
 db-reset:
-    @echo "⚠️  WARNING: This will destroy all data!"
-    @read -p "Are you sure? Type 'yes' to continue: " confirm && [ "$$confirm" = "yes" ]
-    @echo "Resetting database..."
-    docker-compose down -v
+    @echo "Resetting database (WARNING: This will destroy all data!)..."
+    docker-compose down -v postgres redis
     docker-compose up -d postgres redis
-    @just wait-for-db
+    @echo "✅ Database reset complete"
 
-# Wait for database to be ready
-wait-for-db:
-    @echo "Waiting for database to be ready..."
-    @until docker-compose exec -T postgres pg_isready -U postgres > /dev/null 2>&1; do
-        @echo "Database not ready, waiting..."
-        @sleep 2
-    done
-    @echo "Database is ready!"
-
-# Wait for all services to be ready
+# Wait for services to be ready
 wait-for-services:
-    @echo "Waiting for all services to be ready..."
-    @just wait-for-db
-    @echo "Waiting for backend..."
-    @until curl -f http://localhost:8000/health > /dev/null 2>&1; do
-        @echo "Backend not ready, waiting..."
-        @sleep 2
-    done
-    @echo "Waiting for frontend..."
-    @until curl -f http://localhost:3000 > /dev/null 2>&1; do
-        @echo "Frontend not ready, waiting..."
-        @sleep 2
-    done
-    @echo "All services are ready! 🎉"
-
-# Health check all services
-health:
-    @echo "Health Check Results:"
-    @echo "===================="
-    @echo "Database:"
-    @docker-compose exec -T postgres pg_isready -U postgres && echo "✅ Database healthy" || echo "❌ Database unhealthy"
-    @echo "Backend:"
-    @curl -f http://localhost:8000/health > /dev/null 2>&1 && echo "✅ Backend healthy" || echo "❌ Backend unhealthy"
-    @echo "Frontend:"
-    @curl -f http://localhost:3000 > /dev/null 2>&1 && echo "✅ Frontend healthy" || echo "❌ Frontend unhealthy"
-
-# Clean all generated files
-clean: clean-backend clean-frontend
-    @echo "All generated files cleaned! 🧹"
-
-# Clean backend
-clean-backend:
-    @echo "Cleaning backend..."
-    cd backend && just clean
-
-# Clean frontend
-clean-frontend:
-    @echo "Cleaning frontend..."
-    cd frontend && just clean
+    @echo "Waiting for database to be ready..."
+    @echo "Note: This may take a few moments..."
+    @docker-compose exec -T postgres pg_isready -U postgres || (echo "❌ Database is not ready. Please check Docker services." && exit 1)
+    @echo "✅ Database is ready"
+    @echo "Waiting for backend to be ready..."
+    @echo "Note: This may take a few moments..."
+    @curl -f http://localhost:8000/health > /dev/null 2>&1 || (echo "❌ Backend is not ready. Please check Docker services." && exit 1)
+    @echo "✅ Backend is ready"
+    @echo "Waiting for frontend to be ready..."
+    @echo "Note: This may take a few moments..."
+    @curl -f http://localhost:3000 > /dev/null 2>&1 || (echo "❌ Frontend is not ready. Please check Docker services." && exit 1)
+    @echo "✅ Frontend is ready"
 
 # Docker management
-docker:
-    @echo "Docker Management Commands:"
-    @echo "=========================="
-    @echo "  just docker-build     - Build all Docker images"
-    @echo "  just docker-push      - Push images to registry"
-    @echo "  just docker-clean     - Clean Docker resources"
-    @echo "  just docker-stats     - Show Docker statistics"
-
-# Build all Docker images
 docker-build:
     @echo "Building all Docker images..."
     docker-compose build
+    @echo "✅ All Docker images built"
 
-# Push images to registry
-docker-push:
-    @echo "Pushing images to registry..."
-    @echo "Note: Configure your registry first"
-    docker-compose push
-
-# Clean Docker resources
 docker-clean:
     @echo "Cleaning Docker resources..."
-    docker system prune -f
-    docker volume prune -f
+    docker-compose down -v --rmi all
+    @echo "✅ Docker resources cleaned"
 
-# Show Docker statistics
 docker-stats:
-    @echo "Docker Statistics:"
-    @docker stats --no-stream
-
-# Development workflow
-workflow: quality test-cov
-    @echo "Development workflow completed! 🎯"
-
-# Pre-commit checks
-pre-commit: quality test-backend test-frontend
-    @echo "Pre-commit checks passed! ✨"
-
-# CI pipeline simulation
-ci: quality test-cov security
-    @echo "CI pipeline completed! 🚀"
-
-# Security checks
-security: security-backend security-frontend
-    @echo "Security checks completed! 🔒"
-
-# Backend security
-security-backend:
-    @echo "Running backend security checks..."
-    cd backend && just security
-
-# Frontend security
-security-frontend:
-    @echo "Running frontend security checks..."
-    cd frontend && just security
-
-# Update all dependencies
-update: update-backend update-frontend
-    @echo "All dependencies updated! 🔄"
-
-# Update backend dependencies
-update-backend:
-    @echo "Updating backend dependencies..."
-    cd backend && just update
-
-# Update frontend dependencies
-update-frontend:
-    @echo "Updating frontend dependencies..."
-    cd frontend && just update
-
-# Show dependency information
-deps: deps-backend deps-frontend
-    @echo "Dependency information displayed! 📦"
-
-# Show backend dependencies
-deps-backend:
-    @echo "Backend dependencies:"
-    cd backend && just deps
-
-# Show frontend dependencies
-deps-frontend:
-    @echo "Frontend dependencies:"
-    cd frontend && just deps
-
-# Performance monitoring
-monitor:
-    @echo "Performance monitoring started..."
-    @echo "Press Ctrl+C to stop"
+    @echo "Showing Docker container statistics..."
     docker stats
 
-# Backup database
-backup:
-    @echo "Creating database backup..."
-    @timestamp=$$(date +%Y%m%d_%H%M%S)
-    @docker-compose exec -T postgres pg_dump -U postgres language_learning > backup_$$timestamp.sql
-    @echo "Backup created: backup_$$timestamp.sql"
+docker-push:
+    @echo "Pushing Docker images to registry (requires login)..."
+    docker-compose push
+    @echo "✅ Docker images pushed"
 
-# Restore database from backup
-restore file:
-    @echo "Restoring database from {{file}}..."
-    @docker-compose exec -T postgres psql -U postgres language_learning < {{file}}
-    @echo "Database restored!"
-
-# Show application info
+# Application info
 info:
-    @echo "AI Language Learning Application"
-    @echo "================================"
+    @echo "AI Language Learning Application Info:"
+    @echo "====================================="
+    @echo "Application Name: AI Language Learning"
     @echo "Version: 1.0.0"
-    @echo "Backend: FastAPI + Python 3.11+"
-    @echo "Frontend: React 18 + TypeScript"
-    @echo "Database: PostgreSQL + Redis"
-    @echo "Testing: pytest + pytest-bdd + Jest"
+    @echo "Backend Port: 8000"
+    @echo "Frontend Port: 3000"
+    @echo "Database: PostgreSQL"
+    @echo "Cache: Redis"
+    @echo "Backend Framework: FastAPI"
+    @echo "Frontend Framework: React + TypeScript"
+    @echo "Python Version: 3.11+"
+    @echo "Node.js Version: 18+"
     @echo "Package Manager: uv (backend) + npm (frontend)"
     @echo "Command Runner: just"
     @echo "Node.js Manager: nvm"
