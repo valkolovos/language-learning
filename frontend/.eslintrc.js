@@ -12,7 +12,9 @@ module.exports = {
     'no-console': 'off',
     // Additional strict rules for better code quality
     'prefer-const': 'error',
-    'no-var': 'error'
+    'no-var': 'error',
+    // Error out on use of 'any' type to enforce strict typing
+    '@typescript-eslint/no-explicit-any': 'error'
   },
   parserOptions: {
     ecmaVersion: 2020,

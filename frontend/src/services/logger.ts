@@ -28,14 +28,17 @@ if (envLogLevel) {
 export default log;
 
 // Export convenience functions for common logging patterns
-export const logUserAction = (action: string, context?: any) => {
+export const logUserAction = (
+  action: string,
+  context?: Record<string, unknown>,
+) => {
   log.info("User action:", { action, ...context });
 };
 
 export const logLearningProgress = (
   lessonId: string,
   progress: number,
-  context?: any,
+  context?: Record<string, unknown>,
 ) => {
   log.info("Learning progress:", { lessonId, progress, ...context });
 };
@@ -43,7 +46,7 @@ export const logLearningProgress = (
 export const logAudioPlayback = (
   audioId: string,
   action: string,
-  context?: any,
+  context?: Record<string, unknown>,
 ) => {
   log.debug("Audio playback:", { audioId, action, ...context });
 };
@@ -51,7 +54,7 @@ export const logAudioPlayback = (
 export const logLessonLoad = (
   lessonId: string,
   success: boolean,
-  context?: any,
+  context?: Record<string, unknown>,
 ) => {
   if (success) {
     log.info("Lesson loaded successfully:", { lessonId, ...context });

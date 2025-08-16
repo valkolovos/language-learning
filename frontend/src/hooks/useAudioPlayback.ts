@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { AudioPlaybackService } from "../services/audioPlaybackService";
-import { AudioClip, AudioPlaybackState } from "../types/lesson";
+import {
+  AudioClip,
+  AudioPlaybackState,
+  AudioPlaybackEvent,
+} from "../types/lesson";
 import log from "../services/logger";
 
 export const useAudioPlayback = () => {
@@ -18,7 +22,7 @@ export const useAudioPlayback = () => {
     try {
       audioService.current = AudioPlaybackService.getInstance();
 
-      const handlePlaybackEvent = (event: any) => {
+      const handlePlaybackEvent = (event: AudioPlaybackEvent) => {
         setPlaybackState(audioService.current!.getCurrentState());
       };
 

@@ -1,4 +1,5 @@
 import { Lesson, LessonLoadResult } from "../types/lesson";
+import { AUDIO_IDS } from "../constants/audio";
 
 // Sample lesson data - in a real app, this would come from an API or file system
 const SAMPLE_LESSON: Lesson = {
@@ -9,7 +10,7 @@ const SAMPLE_LESSON: Lesson = {
     gloss: "Hello, how are you?",
     tips: "A friendly greeting in Greek",
     audio: {
-      id: "main-line-audio",
+      id: AUDIO_IDS.MAIN_LINE,
       text: "Γειά σου, πώς είσαι;",
       duration: 2.3,
       volume: 0.8,
@@ -23,7 +24,7 @@ const SAMPLE_LESSON: Lesson = {
       gloss: "Hello",
       tips: 'Informal greeting, pronounced "ya soo"',
       audio: {
-        id: "phrase-1-audio",
+        id: AUDIO_IDS.PHRASE_1,
         text: "Γειά σου",
         duration: 1.0,
         volume: 0.8,
@@ -36,7 +37,7 @@ const SAMPLE_LESSON: Lesson = {
       gloss: "how are you?",
       tips: 'Question form, literally "how are you?"',
       audio: {
-        id: "phrase-2-audio",
+        id: AUDIO_IDS.PHRASE_2,
         text: "πώς είσαι;",
         duration: 1.3,
         volume: 0.8,
@@ -49,7 +50,7 @@ const SAMPLE_LESSON: Lesson = {
       gloss: "Good, thank you",
       tips: 'Common response to "how are you?"',
       audio: {
-        id: "phrase-3-audio",
+        id: AUDIO_IDS.PHRASE_3,
         text: "Καλά, ευχαριστώ",
         duration: 1.4,
         volume: 0.8,
@@ -94,12 +95,18 @@ export class LessonService {
         },
       };
     } catch (error) {
+      // Convert error to a safe format for details
+      const errorDetails =
+        error instanceof Error
+          ? { message: error.message, name: error.name, stack: error.stack }
+          : { value: String(error) };
+
       return {
         success: false,
         error: {
           type: "unknown",
           message: "Failed to load lesson due to unexpected error",
-          details: error,
+          details: errorDetails,
         },
       };
     }
@@ -110,10 +117,25 @@ export class LessonService {
    * @param lesson - The lesson object to validate
    * @returns LessonLoadResult - Success/failure with validation results
    */
-  static validateLesson(lesson: any): LessonLoadResult {
+  static validateLesson(lesson: unknown): LessonLoadResult {
     try {
+      // Type guard to ensure lesson is an object
+      if (!lesson || typeof lesson !== "object") {
+        return {
+          success: false,
+          error: {
+            type: "invalid_structure",
+            message: "Lesson must be a valid object",
+            field: "root",
+          },
+        };
+      }
+
+      // Cast to a more specific type for validation
+      const lessonObj = lesson as Record<string, unknown>;
+
       // Check required fields
-      if (!lesson.id || typeof lesson.id !== "string") {
+      if (!lessonObj.id || typeof lessonObj.id !== "string") {
         return {
           success: false,
           error: {
@@ -124,7 +146,7 @@ export class LessonService {
         };
       }
 
-      if (!lesson.title || typeof lesson.title !== "string") {
+      if (!lessonObj.title || typeof lessonObj.title !== "string") {
         return {
           success: false,
           error: {
@@ -135,7 +157,7 @@ export class LessonService {
         };
       }
 
-      if (!lesson.mainLine || typeof lesson.mainLine !== "object") {
+      if (!lessonObj.mainLine || typeof lessonObj.mainLine !== "object") {
         return {
           success: false,
           error: {
@@ -146,11 +168,8 @@ export class LessonService {
         };
       }
 
-      if (
-        !lesson.mainLine.nativeText ||
-        !lesson.mainLine.gloss ||
-        !lesson.mainLine.audio
-      ) {
+      const mainLine = lessonObj.mainLine as Record<string, unknown>;
+      if (!mainLine.nativeText || !mainLine.gloss || !mainLine.audio) {
         return {
           success: false,
           error: {
@@ -161,7 +180,7 @@ export class LessonService {
         };
       }
 
-      if (!Array.isArray(lesson.phrases) || lesson.phrases.length === 0) {
+      if (!Array.isArray(lessonObj.phrases) || lessonObj.phrases.length === 0) {
         return {
           success: false,
           error: {
@@ -173,8 +192,8 @@ export class LessonService {
       }
 
       // Validate each phrase
-      for (let i = 0; i < lesson.phrases.length; i++) {
-        const phrase = lesson.phrases[i];
+      for (let i = 0; i < lessonObj.phrases.length; i++) {
+        const phrase = lessonObj.phrases[i] as Record<string, unknown>;
         if (
           !phrase.id ||
           !phrase.nativeText ||
@@ -193,7 +212,7 @@ export class LessonService {
       }
 
       // Validate audio files exist (basic check)
-      if (!this.validateAudioFiles(lesson)) {
+      if (!this.validateAudioFiles(lessonObj)) {
         return {
           success: false,
           error: {
@@ -209,12 +228,18 @@ export class LessonService {
         lesson: lesson as Lesson,
       };
     } catch (error) {
+      // Convert error to a safe format for details
+      const errorDetails =
+        error instanceof Error
+          ? { message: error.message, name: error.name, stack: error.stack }
+          : { value: String(error) };
+
       return {
         success: false,
         error: {
           type: "parse_error",
           message: "Failed to parse lesson content",
-          details: error,
+          details: errorDetails,
         },
       };
     }
@@ -225,10 +250,11 @@ export class LessonService {
    * @param lesson - The lesson object to validate
    * @returns boolean - True if all audio files are valid
    */
-  private static validateAudioFiles(lesson: any): boolean {
+  private static validateAudioFiles(lesson: Record<string, unknown>): boolean {
     try {
       // Check main line audio - must have id and either filename (pre-recorded) or text+language (TTS)
-      const mainAudio = lesson.mainLine.audio;
+      const mainLine = lesson.mainLine as Record<string, unknown>;
+      const mainAudio = mainLine.audio as Record<string, unknown>;
       if (
         !mainAudio.id ||
         (!mainAudio.filename && (!mainAudio.text || !mainAudio.language))
@@ -237,8 +263,9 @@ export class LessonService {
       }
 
       // Check phrase audio files - must have id and either filename (pre-recorded) or text+language (TTS)
-      for (const phrase of lesson.phrases) {
-        const phraseAudio = phrase.audio;
+      const phrases = lesson.phrases as Array<Record<string, unknown>>;
+      for (const phrase of phrases) {
+        const phraseAudio = phrase.audio as Record<string, unknown>;
         if (
           !phraseAudio.id ||
           (!phraseAudio.filename &&
@@ -249,7 +276,9 @@ export class LessonService {
       }
 
       return true;
-    } catch {
+    } catch (error) {
+      // Log the error for debugging but return false for validation failure
+      console.warn("Audio validation error:", error);
       return false;
     }
   }

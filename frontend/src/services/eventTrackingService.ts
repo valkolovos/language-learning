@@ -1,12 +1,42 @@
 import log from "./logger";
 
+// Define specific detail types for each event type
+export interface LessonStartedDetails {
+  difficulty?: string;
+  estimatedDuration?: number;
+}
+
+export interface AudioPlayDetails {
+  duration?: number;
+  language?: string;
+  volume?: number;
+}
+
+export interface TextRevealedDetails {
+  playCount: number;
+  timeToReveal?: number;
+}
+
+export interface PhraseReplayDetails {
+  phraseIndex: number;
+  replayCount: number;
+}
+
+// Union type for all possible event details
+export type EventDetails =
+  | LessonStartedDetails
+  | AudioPlayDetails
+  | TextRevealedDetails
+  | PhraseReplayDetails
+  | Record<string, unknown>; // Fallback for additional properties
+
 export interface TrackedEvent {
   type: "lesson_started" | "audio_play" | "text_revealed" | "phrase_replay";
   timestamp: number;
   lessonId?: string;
   audioId?: string;
   phraseId?: string;
-  details?: any;
+  details?: EventDetails;
 }
 
 export class EventTrackingService {

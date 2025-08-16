@@ -3,6 +3,11 @@ import {
   AudioPlaybackState,
   AudioPlaybackEvent,
 } from "../types/lesson";
+import {
+  AUDIO_IDS,
+  AUDIO_SETTINGS,
+  PLAYBACK_THRESHOLDS,
+} from "../constants/audio";
 
 export class AudioPlaybackService {
   private static instance: AudioPlaybackService;
@@ -14,6 +19,7 @@ export class AudioPlaybackService {
   private canReveal: boolean = false;
   private error: string | null = null;
   private eventListeners: ((event: AudioPlaybackEvent) => void)[] = [];
+  private mainLineAudioId: string = AUDIO_IDS.MAIN_LINE; // Configurable main line identifier
 
   private constructor() {
     // Check if Web Speech API is supported
@@ -43,10 +49,11 @@ export class AudioPlaybackService {
       this.currentUtterance = new SpeechSynthesisUtterance(audioClip.text);
 
       // Configure TTS settings
-      this.currentUtterance.lang = audioClip.language || "en-US";
+      this.currentUtterance.lang =
+        audioClip.language || AUDIO_SETTINGS.DEFAULT_LANGUAGE;
       this.currentUtterance.volume = audioClip.volume;
-      this.currentUtterance.rate = 0.9; // Slightly slower for language learning
-      this.currentUtterance.pitch = 1.0;
+      this.currentUtterance.rate = AUDIO_SETTINGS.DEFAULT_RATE; // Slightly slower for language learning
+      this.currentUtterance.pitch = AUDIO_SETTINGS.DEFAULT_PITCH;
 
       // Set up utterance event handlers
       this.currentUtterance.onstart = () =>
@@ -121,6 +128,7 @@ export class AudioPlaybackService {
     this.playCount = 0;
     this.canReveal = false;
     this.error = null;
+    this.mainLineAudioId = AUDIO_IDS.MAIN_LINE; // Reset to default
   }
 
   /**
@@ -140,6 +148,21 @@ export class AudioPlaybackService {
     }
   }
 
+  /**
+   * Set the main line audio identifier for this lesson
+   * @param audioId - The audio ID that represents the main line
+   */
+  setMainLineAudioId(audioId: string): void {
+    this.mainLineAudioId = audioId;
+  }
+
+  /**
+   * Get the current main line audio identifier
+   */
+  getMainLineAudioId(): string {
+    return this.mainLineAudioId;
+  }
+
   // Private event handlers
   private handleSpeechStart(audioId: string): void {
     this.isPlaying = true;
@@ -150,11 +173,11 @@ export class AudioPlaybackService {
     this.isPlaying = false;
 
     // Only count complete plays of the main line
-    if (this.currentAudioId === "main-line-audio") {
+    if (this.currentAudioId === this.mainLineAudioId) {
       this.playCount++;
 
       // Check if we can reveal text (after 2 complete plays)
-      if (this.playCount >= 2) {
+      if (this.playCount >= PLAYBACK_THRESHOLDS.REVEAL_AFTER_PLAYS) {
         this.canReveal = true;
       }
     }

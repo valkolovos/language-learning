@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Lesson, LessonLoadResult } from "../types/lesson";
+import { Lesson, LessonLoadResult, AudioClip } from "../types/lesson";
 import { LessonService } from "../services/lessonService";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { AudioPlayer } from "./AudioPlayer";
@@ -66,7 +66,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   };
 
   // Handle main line audio play
-  const handleMainLinePlay = (audioClip: any) => {
+  const handleMainLinePlay = (audioClip: AudioClip) => {
     playAudio(audioClip);
     // Track audio play event
     eventTracking.current.trackAudioPlay(audioClip.id, lessonId);

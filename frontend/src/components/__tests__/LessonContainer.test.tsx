@@ -7,21 +7,24 @@ import { LessonService } from "../../services/lessonService";
 jest.mock("../../services/lessonService");
 const mockLessonService = LessonService as jest.Mocked<typeof LessonService>;
 
-// Mock the audio playback hook with a stable implementation
+// Mock the audio playback hook with a stable implementation that doesn't cause state updates
 const mockPlayAudio = jest.fn();
 const mockStopAudio = jest.fn();
 const mockResetPlayback = jest.fn();
 const mockGetCurrentState = jest.fn();
 
+// Create a stable mock that doesn't change during tests
+const mockPlaybackState = {
+  isPlaying: false,
+  currentAudioId: null,
+  playCount: 0,
+  canReveal: false,
+  error: null,
+};
+
 jest.mock("../../hooks/useAudioPlayback", () => ({
   useAudioPlayback: () => ({
-    playbackState: {
-      isPlaying: false,
-      currentAudioId: null,
-      playCount: 0,
-      canReveal: false,
-      error: null,
-    },
+    playbackState: mockPlaybackState,
     playAudio: mockPlayAudio,
     stopAudio: mockStopAudio,
     resetPlayback: mockResetPlayback,
@@ -41,6 +44,13 @@ jest.mock("../../services/eventTrackingService", () => ({
   },
 }));
 
+// Mock the logger to prevent console errors
+jest.mock("../../services/logger", () => ({
+  error: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+}));
+
 describe("LessonContainer", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -51,7 +61,7 @@ describe("LessonContainer", () => {
     mockGetCurrentState.mockClear();
   });
 
-  it("shows loading state initially", () => {
+  it("shows loading state initially", async () => {
     // Mock a delayed response to keep component in loading state
     (mockLessonService.loadLesson as jest.Mock).mockImplementation(
       () => new Promise(() => {}), // Never resolves, keeps loading state
@@ -62,24 +72,29 @@ describe("LessonContainer", () => {
     expect(screen.getByText("Loading lesson...")).toBeInTheDocument();
   });
 
-  it("calls LessonService.loadLesson with correct lessonId", () => {
+  it("calls LessonService.loadLesson with correct lessonId", async () => {
+    const mockLesson = {
+      id: "test-lesson",
+      title: "Test Lesson",
+      mainLine: {
+        nativeText: "Test",
+        gloss: "Test",
+        audio: { id: "audio-1", filename: "test.mp3" },
+      },
+      phrases: [],
+    };
+
     (mockLessonService.loadLesson as jest.Mock).mockResolvedValue({
       success: true,
-      lesson: {
-        id: "test-lesson",
-        title: "Test Lesson",
-        mainLine: {
-          nativeText: "Test",
-          gloss: "Test",
-          audio: { id: "audio-1", filename: "test.mp3" },
-        },
-        phrases: [],
-      },
+      lesson: mockLesson,
     });
 
     render(<LessonContainer lessonId="test-lesson" />);
 
-    expect(mockLessonService.loadLesson).toHaveBeenCalledWith("test-lesson");
+    // Wait for the async operation to complete
+    await waitFor(() => {
+      expect(mockLessonService.loadLesson).toHaveBeenCalledWith("test-lesson");
+    });
   });
 
   it("handles lesson loading success", async () => {
@@ -108,16 +123,15 @@ describe("LessonContainer", () => {
 
     render(<LessonContainer lessonId="test-lesson" />);
 
-    // Wait for loading to complete
+    // Wait for loading to complete and lesson to be displayed
     await waitFor(
       () => {
-        expect(screen.queryByText("Loading lesson...")).not.toBeInTheDocument();
+        expect(screen.getByText("Test Lesson")).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
 
     // Should show lesson content
-    expect(screen.getByText("Test Lesson")).toBeInTheDocument();
     expect(screen.getByText("🎧 Listen First")).toBeInTheDocument();
   });
 
@@ -130,18 +144,17 @@ describe("LessonContainer", () => {
       },
     });
 
-    render(<LessonContainer lessonId="invalid-lesson" />);
+    render(<LessonContainer lessonId="test-lesson" />);
 
-    // Wait for loading to complete
+    // Wait for loading to complete and error to be displayed
     await waitFor(
       () => {
-        expect(screen.queryByText("Loading lesson...")).not.toBeInTheDocument();
+        expect(screen.getByText("Error Loading Lesson")).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
 
     // Should show error message
-    expect(screen.getByText("Error Loading Lesson")).toBeInTheDocument();
     expect(screen.getByText("Lesson not found")).toBeInTheDocument();
   });
 });

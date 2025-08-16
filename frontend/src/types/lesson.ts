@@ -36,7 +36,7 @@ export interface LessonContentError {
   type: "parse_error" | "missing_audio" | "invalid_structure" | "unknown";
   message: string;
   field?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface LessonLoadResult {
@@ -58,5 +58,5 @@ export interface AudioPlaybackEvent {
   type: "play_started" | "play_completed" | "play_error" | "play_aborted";
   audioId: string;
   timestamp: number;
-  details?: any;
+  details?: Record<string, unknown>;
 }
