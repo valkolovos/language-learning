@@ -3,12 +3,37 @@
 # AI Language Learning Application Setup Script
 # This script sets up the complete development environment
 #
+# Security Features:
+# - Network connectivity validation before downloads
+# - Timeout and retry logic for network operations
+# - Proper checksum validation with format verification
+# - Secure download handling with error checking
+# - Temporary file cleanup on failures
+#
 # Usage:
 #   ./setup.sh                    # Interactive mode (default)
 #   NON_INTERACTIVE=true ./setup.sh  # Non-interactive mode (skips prompts)
 
 set -e  # Exit on any error
 set -o pipefail  # Exit if any command in a pipeline fails
+
+# Global variable to track temporary files for cleanup
+TEMP_FILES=()
+
+# Function to cleanup temporary files on exit
+cleanup_temp_files() {
+    if [ ${#TEMP_FILES[@]} -gt 0 ]; then
+        print_status "Cleaning up temporary files..."
+        for temp_file in "${TEMP_FILES[@]}"; do
+            if [ -f "$temp_file" ]; then
+                rm -f "$temp_file"
+            fi
+        done
+    fi
+}
+
+# Set trap to cleanup on script exit
+trap cleanup_temp_files EXIT
 
 echo "🚀 Setting up AI Language Learning Application..."
 
@@ -34,6 +59,48 @@ print_warning() {
 
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Function to check network connectivity
+check_network_connectivity() {
+    local test_urls=("https://google.com" "https://github.com" "https://astral.sh" "https://just.systems")
+    local connected=false
+    
+    print_status "Checking network connectivity..."
+    
+    for url in "${test_urls[@]}"; do
+        if curl --proto '=https' --tlsv1.2 -sSf --max-time 10 --connect-timeout 5 "$url" >/dev/null 2>&1; then
+            connected=true
+            print_success "Network connectivity confirmed via $url"
+            break
+        fi
+    done
+    
+    if [ "$connected" = false ]; then
+        print_error "Network connectivity check failed. Please check your internet connection and try again."
+        print_error "The script needs internet access to download and verify installers securely."
+        exit 1
+    fi
+}
+
+# Function to validate SHA256 checksum format
+validate_checksum() {
+    local checksum="$1"
+    local source="$2"
+    
+    # Check if checksum is empty
+    if [ -z "$checksum" ]; then
+        print_error "Empty checksum received from $source. Security check failed."
+        return 1
+    fi
+    
+    # Check if checksum is exactly 64 hex characters
+    if ! [[ "$checksum" =~ ^[a-fA-F0-9]{64}$ ]]; then
+        print_error "Invalid checksum format received from $source. Expected 64 hex characters, got: ${checksum:0:20}..."
+        return 1
+    fi
+    
+    return 0
 }
 
 # Check if Docker is running
@@ -163,30 +230,91 @@ check_uv() {
     if ! command -v uv &> /dev/null; then
         print_warning "uv is not installed. Installing uv..."
         
-        # Download and verify uv installer
+        # Download and verify uv installer with proper error handling
         UV_INSTALLER_URL="https://astral.sh/uv/install.sh"
-        UV_INSTALLER_SHA256="$(curl -s https://astral.sh/uv/install.sh.sha256 | cut -d' ' -f1)"
+        UV_CHECKSUM_URL="https://astral.sh/uv/install.sh.sha256"
         
-        if [ -z "$UV_INSTALLER_SHA256" ]; then
-            print_error "Failed to get uv installer checksum. Installation aborted for security."
-            exit 1
-        fi
+        # Function to safely download and verify checksum
+        download_with_checksum() {
+            local url="$1"
+            local checksum_url="$2"
+            local installer_name="$3"
+            
+            print_status "Downloading $installer_name checksum..."
+            
+            # Download checksum with timeout and error checking
+            local checksum_response
+            if ! checksum_response=$(curl --proto '=https' --tlsv1.2 -sSf --max-time 30 --retry 3 --retry-delay 2 "$checksum_url" 2>/dev/null); then
+                print_error "Failed to download checksum from $checksum_url. Network error or timeout."
+                return 1
+            fi
+            
+            # Validate checksum format (should be 64 hex characters)
+            local checksum
+            if ! checksum=$(echo "$checksum_response" | grep -E '^[a-fA-F0-9]{64}' | head -n1); then
+                print_error "Invalid checksum format received from $checksum_url. Security check failed."
+                return 1
+            fi
+            
+            # Use the validation function
+            if ! validate_checksum "$checksum" "$checksum_url"; then
+                return 1
+            fi
+            
+            print_status "Checksum validation successful: ${checksum:0:8}..."
+            
+            # Download installer with timeout and error checking
+            print_status "Downloading $installer_name installer..."
+            local temp_installer
+            temp_installer=$(mktemp)
+            TEMP_FILES+=("$temp_installer")
+            
+            if ! curl --proto '=https' --tlsv1.2 -sSf --max-time 60 --retry 3 --retry-delay 2 "$url" -o "$temp_installer" 2>/dev/null; then
+                print_error "Failed to download installer from $url. Network error or timeout."
+                rm -f "$temp_installer"
+                return 1
+            fi
+            
+            # Verify checksum
+            print_status "Verifying installer checksum..."
+            if ! echo "$checksum  $temp_installer" | sha256sum -c --quiet 2>/dev/null; then
+                print_error "Checksum verification failed for $installer_name installer. Installation aborted for security."
+                rm -f "$temp_installer"
+                return 1
+            fi
+            
+            print_success "Checksum verification successful for $installer_name"
+            echo "$temp_installer"
+            return 0
+        }
         
-        # Download installer to temporary file for verification
-        TEMP_INSTALLER=$(mktemp)
-        curl -LsSf "$UV_INSTALLER_URL" -o "$TEMP_INSTALLER"
-        
-        # Verify checksum
-        if ! echo "$UV_INSTALLER_SHA256  $TEMP_INSTALLER" | sha256sum -c --quiet; then
-            print_error "Checksum verification failed for uv installer. Installation aborted for security."
-            rm -f "$TEMP_INSTALLER"
+        # Download and verify uv installer
+        if ! TEMP_INSTALLER=$(download_with_checksum "$UV_INSTALLER_URL" "$UV_CHECKSUM_URL" "uv"); then
+            print_error "Failed to download uv installer securely. Please install manually from https://astral.sh/uv/"
             exit 1
         fi
         
         # Execute verified installer
-        sh "$TEMP_INSTALLER"
+        print_status "Installing uv..."
+        if ! sh "$TEMP_INSTALLER"; then
+            print_error "Failed to execute uv installer"
+            rm -f "$TEMP_INSTALLER"
+            exit 1
+        fi
+        
+        # Clean up
         rm -f "$TEMP_INSTALLER"
-        source $HOME/.cargo/env
+        
+        # Source cargo environment
+        if [ -f "$HOME/.cargo/env" ]; then
+            source "$HOME/.cargo/env"
+        fi
+        
+        # Verify installation
+        if ! command -v uv &> /dev/null; then
+            print_error "uv installation failed. Please install manually from https://astral.sh/uv/"
+            exit 1
+        fi
     fi
     print_success "uv is available"
 }
@@ -197,151 +325,140 @@ check_just() {
     if ! command -v just &> /dev/null; then
         print_warning "just is not installed. Installing just..."
         
+        # Function to safely download and verify just installer
+        download_just_installer() {
+            local checksum_url="https://just.systems/install.sh.sha256"
+            local installer_url="https://just.systems/install.sh"
+            
+            print_status "Downloading just installer checksum..."
+            
+            # Download checksum with timeout and error checking
+            local checksum_response
+            if ! checksum_response=$(curl --proto '=https' --tlsv1.2 -sSf --max-time 30 --retry 3 --retry-delay 2 "$checksum_url" 2>/dev/null); then
+                print_error "Failed to download just checksum from $checksum_url. Network error or timeout."
+                return 1
+            fi
+            
+            # Validate checksum format (should be 64 hex characters)
+            local checksum
+            if ! checksum=$(echo "$checksum_response" | grep -E '^[a-fA-F0-9]{64}' | head -n1); then
+                print_error "Invalid checksum format received from $checksum_url. Security check failed."
+                return 1
+            fi
+            
+            # Use the validation function
+            if ! validate_checksum "$checksum" "$checksum_url"; then
+                return 1
+            fi
+            
+            print_status "Checksum validation successful: ${checksum:0:8}..."
+            
+            # Download installer with timeout and error checking
+            print_status "Downloading just installer..."
+            local temp_installer
+            temp_installer=$(mktemp)
+            TEMP_FILES+=("$temp_installer")
+            
+            if ! curl --proto '=https' --tlsv1.2 -sSf --max-time 60 --retry 3 --retry-delay 2 "$installer_url" -o "$temp_installer" 2>/dev/null; then
+                print_error "Failed to download just installer from $installer_url. Network error or timeout."
+                rm -f "$temp_installer"
+                return 1
+            fi
+            
+            # Verify checksum
+            print_status "Verifying just installer checksum..."
+            if ! echo "$checksum  $temp_installer" | sha256sum -c --quiet 2>/dev/null; then
+                print_error "Checksum verification failed for just installer. Installation aborted for security."
+                rm -f "$temp_installer"
+                return 1
+            fi
+            
+            print_success "Checksum verification successful for just"
+            echo "$temp_installer"
+            return 0
+        }
+        
         # Detect OS and install just
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            # Linux
-            if command -v apt-get &> /dev/null; then
-                # Debian/Ubuntu
-                # Download and verify just installer
-                JUST_INSTALLER_URL="https://just.systems/install.sh"
-                JUST_INSTALLER_SHA256="$(curl -s https://just.systems/install.sh.sha256 | cut -d' ' -f1)"
-                
-                if [ -z "$JUST_INSTALLER_SHA256" ]; then
-                    print_error "Failed to get just installer checksum. Installation aborted for security."
-                    exit 1
-                fi
-                
-                # Download installer to temporary file for verification
-                TEMP_INSTALLER=$(mktemp)
-                curl --proto '=https' --tlsv1.2 -sSf "$JUST_INSTALLER_URL" -o "$TEMP_INSTALLER"
-                
-                # Verify checksum
-                if ! echo "$JUST_INSTALLER_SHA256  $TEMP_INSTALLER" | sha256sum -c --quiet; then
-                    print_error "Checksum verification failed for just installer. Installation aborted for security."
-                    rm -f "$TEMP_INSTALLER"
-                    exit 1
-                fi
-                
-                # Execute verified installer
-                bash "$TEMP_INSTALLER" --to ~/.local/bin
-                rm -f "$TEMP_INSTALLER"
-                export PATH="$HOME/.local/bin:$PATH"
-            elif command -v yum &> /dev/null; then
-                # RHEL/CentOS
-                # Download and verify just installer
-                JUST_INSTALLER_URL="https://just.systems/install.sh"
-                JUST_INSTALLER_SHA256="$(curl -s https://just.systems/install.sh.sha256 | cut -d' ' -f1)"
+            # Linux - all distributions use the same installer
+            print_status "Installing just on Linux..."
             
-                if [ -z "$JUST_INSTALLER_SHA256" ]; then
-                    print_error "Failed to get just installer checksum. Installation aborted for security."
-                    exit 1
-                fi
-            
-                # Download installer to temporary file for verification
-                TEMP_INSTALLER=$(mktemp)
-                curl --proto '=https' --tlsv1.2 -sSf "$JUST_INSTALLER_URL" -o "$TEMP_INSTALLER"
-            
-                # Verify checksum
-                if ! echo "$JUST_INSTALLER_SHA256  $TEMP_INSTALLER" | sha256sum -c --quiet; then
-                    print_error "Checksum verification failed for just installer. Installation aborted for security."
-                    exit 1
-                fi
-                
-                # Execute verified installer
-                bash "$TEMP_INSTALLER" --to ~/.local/bin
-                rm -f "$TEMP_INSTALLER"
-                export PATH="$HOME/.local/bin:$PATH"
-            else
-                # Generic Linux
-                # Download and verify just installer
-                JUST_INSTALLER_URL="https://just.systems/install.sh"
-                JUST_INSTALLER_SHA256="$(curl -s https://just.systems/install.sh.sha256 | cut -d' ' -f1)"
-                
-                if [ -z "$JUST_INSTALLER_SHA256" ]; then
-                    print_error "Failed to get just installer checksum. Installation aborted for security."
-                    exit 1
-                fi
-                
-                # Download installer to temporary file for verification
-                TEMP_INSTALLER=$(mktemp)
-                curl --proto '=https' --tlsv1.2 -sSf "$JUST_INSTALLER_URL" -o "$TEMP_INSTALLER"
-                
-                # Verify checksum
-                if ! echo "$JUST_INSTALLER_SHA256  $TEMP_INSTALLER" | sha256sum -c --quiet; then
-                    print_error "Checksum verification failed for just installer. Installation aborted for security."
-                    rm -f "$TEMP_INSTALLER"
-                    exit 1
-                fi
-                
-                # Execute verified installer
-                bash "$TEMP_INSTALLER" --to ~/.local/bin
-                rm -f "$TEMP_INSTALLER"
-                export PATH="$HOME/.local/bin:$PATH"
-            fi
-            elif [[ "$OSTYPE" == "darwin"* ]]; then
-                # macOS
-                if command -v brew &> /dev/null; then
-                    brew install just
-                else
-                    # Download and verify just installer
-                    JUST_INSTALLER_URL="https://just.systems/install.sh"
-                    JUST_INSTALLER_SHA256="$(curl -s https://just.systems/install.sh.sha256 | cut -d' ' -f1)"
-                    
-                    if [ -z "$JUST_INSTALLER_SHA256" ]; then
-                        print_error "Failed to get just installer checksum. Installation aborted for security."
-                        exit 1
-                    fi
-                    
-                    # Download installer to temporary file for verification
-                    TEMP_INSTALLER=$(mktemp)
-                    curl --proto '=https' --tlsv1.2 -sSf "$JUST_INSTALLER_URL" -o "$TEMP_INSTALLER"
-                    
-                    # Verify checksum
-                    if ! echo "$JUST_INSTALLER_SHA256  $TEMP_INSTALLER" | shasum -a 256 -c --quiet; then
-                        print_error "Checksum verification failed for just installer. Installation aborted for security."
-                        rm -f "$TEMP_INSTALLER"
-                        exit 1
-                    fi
-                    
-                    # Execute verified installer
-                    bash "$TEMP_INSTALLER" --to ~/.local/bin
-                    rm -f "$TEMP_INSTALLER"
-                    export PATH="$HOME/.local/bin:$PATH"
-                fi
-            else
-                # Generic Unix
-                # Download and verify just installer
-                JUST_INSTALLER_URL="https://just.systems/install.sh"
-                JUST_INSTALLER_SHA256="$(curl -s https://just.systems/install.sh.sha256 | cut -d' ' -f1)"
-                
-                if [ -z "$JUST_INSTALLER_SHA256" ]; then
-                    print_error "Failed to get just installer checksum. Installation aborted for security."
-                    exit 1
-                fi
-                
-                # Download installer to temporary file for verification
-                TEMP_INSTALLER=$(mktemp)
-                curl --proto '=https' --tlsv1.2 -sSf "$JUST_INSTALLER_URL" -o "$TEMP_INSTALLER"
-                
-                # Verify checksum
-                if ! echo "$JUST_INSTALLER_SHA256  $TEMP_INSTALLER" | sha256sum -c --quiet; then
-                    print_error "Checksum verification failed for just installer. Installation aborted for security."
-                    rm -f "$TEMP_INSTALLER"
-                    exit 1
-                fi
-                
-                # Execute verified installer
-                bash "$TEMP_INSTALLER" --to ~/.local/bin
-                rm -f "$TEMP_INSTALLER"
-                export PATH="$HOME/.local/bin:$PATH"
-            fi
-        
-            # Verify installation
-            if ! command -v just &> /dev/null; then
-                print_error "Failed to install just. Please install manually from https://just.systems/"
+            if ! TEMP_INSTALLER=$(download_just_installer); then
+                print_error "Failed to download just installer securely. Please install manually from https://just.systems/"
                 exit 1
             fi
+            
+            # Execute verified installer
+            print_status "Installing just..."
+            if ! bash "$TEMP_INSTALLER" --to ~/.local/bin; then
+                print_error "Failed to execute just installer"
+                rm -f "$TEMP_INSTALLER"
+                exit 1
+            fi
+            
+            # Clean up
+            rm -f "$TEMP_INSTALLER"
+            export PATH="$HOME/.local/bin:$PATH"
+            
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            if command -v brew &> /dev/null; then
+                print_status "Installing just via Homebrew..."
+                if ! brew install just; then
+                    print_error "Failed to install just via Homebrew"
+                    exit 1
+                fi
+            else
+                print_status "Installing just via installer script..."
+                
+                if ! TEMP_INSTALLER=$(download_just_installer); then
+                    print_error "Failed to download just installer securely. Please install manually from https://just.systems/"
+                    exit 1
+                fi
+                
+                # Execute verified installer
+                print_status "Installing just..."
+                if ! bash "$TEMP_INSTALLER" --to ~/.local/bin; then
+                    print_error "Failed to execute just installer"
+                    rm -f "$TEMP_INSTALLER"
+                    exit 1
+                fi
+                
+                # Clean up
+                rm -f "$TEMP_INSTALLER"
+                export PATH="$HOME/.local/bin:$PATH"
+            fi
+        else
+            # Generic Unix
+            print_status "Installing just on Unix system..."
+            
+            if ! TEMP_INSTALLER=$(download_just_installer); then
+                print_error "Failed to download just installer securely. Please install manually from https://just.systems/"
+                exit 1
+            fi
+            
+            # Execute verified installer
+            print_status "Installing just..."
+            if ! bash "$TEMP_INSTALLER" --to ~/.local/bin; then
+                print_error "Failed to execute just installer"
+                rm -f "$TEMP_INSTALLER"
+                exit 1
+            fi
+            
+            # Clean up
+            rm -f "$TEMP_INSTALLER"
+            export PATH="$HOME/.local/bin:$PATH"
         fi
+        
+        # Verify installation
+        if ! command -v just &> /dev/null; then
+            print_error "Failed to install just. Please install manually from https://just.systems/"
+            exit 1
+        fi
+        
+        print_success "just installed successfully"
+    fi
+    
     print_success "just is available"
     
     # Check if required justfile commands are available
@@ -671,6 +788,7 @@ main() {
     # Check prerequisites
     check_docker
     check_docker_compose
+    check_network_connectivity
     check_uv
     check_python
     check_nvm
@@ -688,6 +806,13 @@ main() {
     echo ""
     show_setup_status
     print_success "Setup complete! 🎉"
+    echo ""
+    echo "Security improvements implemented:"
+    echo "  ✅ Network connectivity validation"
+    echo "  ✅ Timeout and retry logic for downloads"
+    echo "  ✅ Proper checksum validation with format verification"
+    echo "  ✅ Secure download handling with error checking"
+    echo "  ✅ Automatic cleanup of temporary files"
     echo ""
     echo "Now you can use 'just' commands for development:"
     echo "  just help             - Show all commands"

@@ -3,6 +3,7 @@ AI service integration for language learning features.
 """
 
 import json
+import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -21,7 +22,12 @@ logger = structlog.get_logger(__name__)
 
 
 class AIService:
-    """AI service for language learning features."""
+    """AI service for language learning features.
+
+    Note: This service implements conditional logging for expensive operations
+    like usage information extraction. The _get_usage_info method is only called
+    when error logging is enabled to avoid unnecessary processing overhead.
+    """
 
     def __init__(self) -> None:
         """Initialize AI service with credentials."""
@@ -328,6 +334,11 @@ class AIService:
             # Parse response
             content = response.choices[0].message.content
             if not content:
+                # Only call _get_usage_info if error logging is enabled
+                usage_info = None
+                if logger.isEnabledFor(logging.ERROR):
+                    usage_info = self._get_usage_info(response.usage) if response.usage else None
+
                 logger.error(
                     "AI model returned empty content",
                     topic=topic,
@@ -335,7 +346,7 @@ class AIService:
                     target_language=target_language,
                     model=settings.AI_MODEL_NAME,
                     response_choices_count=len(response.choices),
-                    response_usage=self._get_usage_info(response.usage) if response.usage else None,
+                    response_usage=usage_info,
                 )
                 return {
                     "error": "AI model returned empty content",
@@ -428,13 +439,18 @@ class AIService:
 
             content = response.choices[0].message.content
             if not content:
+                # Only call _get_usage_info if error logging is enabled
+                usage_info = None
+                if logger.isEnabledFor(logging.ERROR):
+                    usage_info = self._get_usage_info(response.usage) if response.usage else None
+
                 logger.error(
                     "AI model returned empty content for exercises",
                     lesson_title=lesson_content.get("title", "Unknown"),
                     exercise_count=exercise_count,
                     model=settings.AI_MODEL_NAME,
                     response_choices_count=len(response.choices),
-                    response_usage=self._get_usage_info(response.usage) if response.usage else None,
+                    response_usage=usage_info,
                 )
                 return {
                     "error": "AI model returned empty content for exercises",
@@ -704,22 +720,31 @@ class AIService:
             return []
 
     def _get_usage_info(self, usage: Any) -> Dict[str, Any]:
-        """Safely extract usage information from OpenAI response."""
+        """Safely extract usage information from OpenAI response.
+
+        This method is called conditionally only when error logging is enabled
+        to avoid unnecessary processing overhead during normal operation.
+        """
+        if usage is None:
+            return {"error": "No usage information available"}
+
         try:
-            # Try the modern method first
+            # Try the modern method first (OpenAI Python client v1.0+)
             if hasattr(usage, "model_dump"):
                 result = usage.model_dump()
                 if isinstance(result, dict):
                     return result
                 else:
                     return {"error": "model_dump() returned non-dict"}
-            # Fallback to the older method
+
+            # Fallback to the older method (OpenAI Python client < v1.0)
             elif hasattr(usage, "dict"):
                 result = usage.dict()
                 if isinstance(result, dict):
                     return result
                 else:
                     return {"error": "dict() returned non-dict"}
+
             # Fallback to accessing attributes directly
             else:
                 return {
@@ -728,11 +753,21 @@ class AIService:
                     "total_tokens": getattr(usage, "total_tokens", None),
                 }
         except Exception as e:
-            logger.warning("Failed to extract usage information", error=str(e))
+            # Use a simple error message to avoid recursive logging issues
             return {"error": f"Failed to extract usage: {str(e)}"}
 
     def _validate_openai_api_key(self, api_key: Optional[str]) -> bool:
         """Validate OpenAI API key format and presence."""
+        # OpenAI API key format constants
+        # As of 2024, OpenAI API keys:
+        # - Start with 'sk-' prefix (3 characters)
+        # - Are typically 51 characters total length
+        # - Have a minimum reasonable length of 20 characters
+        # These values may change with future OpenAI API updates
+        OPENAI_API_KEY_PREFIX = "sk-"
+        OPENAI_API_KEY_TYPICAL_LENGTH = 51
+        OPENAI_API_KEY_MIN_LENGTH = 20
+
         if not api_key:
             logger.warning("OpenAI API key is not set")
             return False
@@ -744,14 +779,26 @@ class AIService:
             logger.warning("OpenAI API key is empty or contains only whitespace")
             return False
 
-        # OpenAI API keys typically start with 'sk-' and are 51 characters long
-        if not api_key.startswith("sk-"):
-            logger.warning("OpenAI API key format is invalid - should start with 'sk-'")
+        # Validate API key prefix
+        if not api_key.startswith(OPENAI_API_KEY_PREFIX):
+            logger.warning(f"OpenAI API key format is invalid - should start with '{OPENAI_API_KEY_PREFIX}'")
             return False
 
-        if len(api_key) < 20:  # Minimum reasonable length
-            logger.warning("OpenAI API key appears to be too short")
+        # Validate minimum length (sanity check)
+        if len(api_key) < OPENAI_API_KEY_MIN_LENGTH:
+            logger.warning(
+                f"OpenAI API key appears to be too short - "
+                f"minimum expected length is {OPENAI_API_KEY_MIN_LENGTH} characters"
+            )
             return False
+
+        # Log the actual length for debugging (without exposing the full key)
+        actual_length = len(api_key)
+        if actual_length != OPENAI_API_KEY_TYPICAL_LENGTH:
+            logger.info(
+                f"OpenAI API key length is {actual_length} characters "
+                f"(typical length is {OPENAI_API_KEY_TYPICAL_LENGTH})"
+            )
 
         logger.info("OpenAI API key validation passed")
         return True
