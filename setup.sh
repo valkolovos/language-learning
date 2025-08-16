@@ -8,6 +8,7 @@
 #   NON_INTERACTIVE=true ./setup.sh  # Non-interactive mode (skips prompts)
 
 set -e  # Exit on any error
+set -o pipefail  # Exit if any command in a pipeline fails
 
 echo "🚀 Setting up AI Language Learning Application..."
 
@@ -68,13 +69,29 @@ check_python() {
     # Check if we have a Python version that meets our requirements (>=3.11)
     print_status "Looking for Python 3.11+ installation..."
     
-    # Try to find Python 3.11+ using uv
-    PYTHON_VERSION=$(uv python find ">=3.11" 2>/dev/null | head -n1 | grep -o 'cpython-[0-9]\+\.[0-9]\+' | head -n1)
+    # Try to find Python 3.11+ using uv with proper error handling
+    PYTHON_VERSION=""
+    if uv python find ">=3.11" >/dev/null 2>&1; then
+        # Use a more robust approach to extract Python version
+        PYTHON_FIND_OUTPUT=$(uv python find ">=3.11" 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$PYTHON_FIND_OUTPUT" ]; then
+            # Extract the first Python version found with error handling
+            PYTHON_VERSION=$(echo "$PYTHON_FIND_OUTPUT" | head -n1 | grep -o 'cpython-[0-9]\+\.[0-9]\+' | head -n1 || true)
+            if [ -n "$PYTHON_VERSION" ]; then
+                print_status "Found existing Python version: $PYTHON_VERSION"
+            fi
+        fi
+    fi
     
     if [ -z "$PYTHON_VERSION" ]; then
         print_status "No Python 3.11+ found, attempting to install with uv..."
-        uv python install "3.11"
-        PYTHON_VERSION="3.11"
+        if uv python install "3.11"; then
+            PYTHON_VERSION="3.11"
+            print_success "Python 3.11 installed successfully"
+        else
+            print_error "Failed to install Python 3.11 with uv"
+            exit 1
+        fi
     fi
     
     # Verify the Python version works
