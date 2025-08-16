@@ -63,7 +63,9 @@ print_error() {
 
 # Function to check network connectivity
 check_network_connectivity() {
-    local test_urls=("https://google.com" "https://github.com" "https://astral.sh" "https://just.systems")
+    # Use canonical endpoints designed for connectivity checks.
+    # These endpoints return a simple response and are highly reliable.
+    local test_urls=("https://connectivitycheck.gstatic.com/generate_204" "https://www.cloudflare.com/cdn-cgi/trace" "https://www.google.com/generate_204")
     local connected=false
     
     print_status "Checking network connectivity..."
