@@ -1,0 +1,24 @@
+---
+description: Accessibility requirements and quality standards
+globs: ["**/components/**", "**/tests/**"]
+alwaysApply: false
+---
+
+# Accessibility & Quality Standards
+
+## Accessibility Requirements
+- **Web-based**: UI must be web-based and support all screen sizes
+- **Keyboard**: Full operability with logical focus order
+- **Screen readers**: Support for playback states and controls
+- **Focus management**: No keyboard traps, proper focus management
+- **Labels**: Descriptive labels and polite announcements
+- **Lighthouse**: A11y score ≥90
+
+## Quality & Testing
+- **BDD tests**: pytest-bdd for critical user flows and requirements coverage
+- **Unit tests**: Reveal gate logic (exactly 2 plays unlock)
+- **Interaction tests**: Pre/post-reveal behaviors
+- **E2E tests**: Critical journeys with stable selectors
+- **Performance**: Keep time-to-first-audio low
+- **Test coverage**: All code must be covered with tests
+- **Requirements coverage**: Use Gherkin BDD tests to cover functional requirements

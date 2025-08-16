@@ -1,0 +1,23 @@
+---
+description: Core product principles for the listen-first language learning MVP
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Core Product Principles
+
+This is an MVP for a listen-first language learning platform focused on achieving 'can-do' moments in ≤5 minutes.
+
+## Key Principles
+- **Audio-first, phrase-first, intelligibility-focused learning**
+- **Tiny loops (30-60 seconds)** with immediate measurable wins
+- **Local-first operation** (no sign-in or cloud dependencies for MVP)
+- **Listen-first gate**: text hidden until main line played twice completely
+- **Focus on conversational phrases** over exhaustive grammar
+
+## MVP Scope - Single Micro-Lesson 'Meet & Greet'
+- One main line + three supporting phrases
+- Audio playback with reveal gate after 2 complete plays
+- Phrase replay functionality after text reveal
+- Lightweight progress signals and XP (visual only)
+- Basic analytics and accessibility (Lighthouse a11y ≥90)
