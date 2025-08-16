@@ -2,6 +2,7 @@ import {
   AudioClip,
   AudioPlaybackState,
   AudioPlaybackEvent,
+  ExtendedError,
   isTTSAudioClip,
 } from "../types/lesson";
 import {
@@ -33,12 +34,6 @@ export class AudioPlaybackService {
         "Consider updating your browser or using a supported browser for the best experience.";
 
       // Create error with user-friendly message and detailed info
-      interface ExtendedError extends Error {
-        userMessage: string;
-        technicalDetails: string;
-        helpUrl: string;
-      }
-
       const error = new Error(userFriendlyMessage) as ExtendedError;
       error.userMessage = userFriendlyMessage;
       error.technicalDetails = detailedMessage;

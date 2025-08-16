@@ -120,3 +120,10 @@ export interface AudioPlaybackEvent {
   timestamp: number;
   details?: Record<string, unknown>;
 }
+
+// Extended error interface for enhanced error handling with user-friendly messages
+export interface ExtendedError extends Error {
+  userMessage: string;
+  technicalDetails: string;
+  helpUrl: string;
+}

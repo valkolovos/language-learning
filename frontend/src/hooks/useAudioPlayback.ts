@@ -40,7 +40,9 @@ export const useAudioPlayback = () => {
 
   const playAudio = useCallback(async (audioClip: AudioClip) => {
     if (!audioService.current) {
-      throw new Error("Audio service not initialized");
+      throw new Error(
+        "Audio player is not ready. Please refresh the page and try again.",
+      );
     }
 
     try {

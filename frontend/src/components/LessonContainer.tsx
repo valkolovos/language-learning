@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Lesson, LessonLoadResult, AudioClip } from "../types/lesson";
 import { LessonService } from "../services/lessonService";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
@@ -25,37 +25,35 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   const { playbackState, playAudio, stopAudio, resetPlayback } =
     useAudioPlayback();
 
-  useEffect(() => {
-    const loadLesson = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const loadLesson = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const result: LessonLoadResult =
-          await LessonService.loadLesson(lessonId);
+      const result: LessonLoadResult = await LessonService.loadLesson(lessonId);
 
-        if (result.success && result.lesson) {
-          setLesson(result.lesson);
-          // Reset audio playback when lesson changes
-          resetPlayback();
-          setTextRevealed(false);
+      if (result.success && result.lesson) {
+        setLesson(result.lesson);
+        // Reset audio playback when lesson changes
+        resetPlayback();
+        setTextRevealed(false);
 
-          // Track lesson started event
-          eventTracking.current.trackLessonStarted(lessonId);
-        } else {
-          setError(result.error?.message || "Failed to load lesson");
-        }
-      } catch (err) {
-        setError("Unexpected error occurred while loading lesson");
-        log.error("Lesson loading error:", err);
-      } finally {
-        setLoading(false);
+        // Track lesson started event
+        eventTracking.current.trackLessonStarted(lessonId);
+      } else {
+        setError(result.error?.message || "Failed to load lesson");
       }
-    };
+    } catch (err) {
+      setError("Unexpected error occurred while loading lesson");
+      log.error("Lesson loading error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [lessonId, resetPlayback]);
 
+  useEffect(() => {
     loadLesson();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lessonId]); // Only depend on lessonId - resetPlayback is stable via useCallback
+  }, [loadLesson]);
 
   // Handle text reveal
   const handleRevealText = () => {
