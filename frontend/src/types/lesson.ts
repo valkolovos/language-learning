@@ -42,3 +42,19 @@ export interface LessonLoadResult {
   lesson?: Lesson;
   error?: LessonContentError;
 }
+
+// New types for audio playback and reveal gate
+export interface AudioPlaybackState {
+  isPlaying: boolean;
+  currentAudioId: string | null;
+  playCount: number; // tracks complete plays of main line
+  canReveal: boolean; // true after 2 complete plays
+  error: string | null;
+}
+
+export interface AudioPlaybackEvent {
+  type: "play_started" | "play_completed" | "play_error" | "play_aborted";
+  audioId: string;
+  timestamp: number;
+  details?: any;
+}

@@ -62,6 +62,17 @@ const SAMPLE_LESSON: Lesson = {
 
 export class LessonService {
   /**
+   * Get the public URL for an audio file
+   * @param filename - The audio filename
+   * @returns string - The public URL for the audio file
+   */
+  static getAudioUrl(filename: string): string {
+    // In a real app, this would point to your audio assets
+    // For now, we'll use placeholder URLs that would work with actual audio files
+    return `/audio/${filename}`;
+  }
+
+  /**
    * Load a lesson by ID
    * @param lessonId - The unique identifier for the lesson
    * @returns Promise<LessonLoadResult> - Success/failure with lesson data or error

@@ -14,7 +14,9 @@ function App() {
         const lessons = await LessonService.getAvailableLessons();
         setAvailableLessons(lessons);
       } catch (error) {
-        console.error("Failed to load available lessons:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to load available lessons:", error);
+        }
       }
     };
 

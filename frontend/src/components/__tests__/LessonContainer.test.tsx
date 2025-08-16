@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { LessonContainer } from "../LessonContainer";
 import { LessonService } from "../../services/lessonService";
 
@@ -7,9 +7,48 @@ import { LessonService } from "../../services/lessonService";
 jest.mock("../../services/lessonService");
 const mockLessonService = LessonService as jest.Mocked<typeof LessonService>;
 
+// Mock the audio playback hook with a stable implementation
+const mockPlayAudio = jest.fn();
+const mockStopAudio = jest.fn();
+const mockResetPlayback = jest.fn();
+const mockGetCurrentState = jest.fn();
+
+jest.mock("../../hooks/useAudioPlayback", () => ({
+  useAudioPlayback: () => ({
+    playbackState: {
+      isPlaying: false,
+      currentAudioId: null,
+      playCount: 0,
+      canReveal: false,
+      error: null,
+    },
+    playAudio: mockPlayAudio,
+    stopAudio: mockStopAudio,
+    resetPlayback: mockResetPlayback,
+    getCurrentState: mockGetCurrentState,
+  }),
+}));
+
+// Mock the event tracking service
+jest.mock("../../services/eventTrackingService", () => ({
+  EventTrackingService: {
+    getInstance: () => ({
+      trackLessonStarted: jest.fn(),
+      trackTextRevealed: jest.fn(),
+      trackAudioPlay: jest.fn(),
+      trackPhraseReplay: jest.fn(),
+    }),
+  },
+}));
+
 describe("LessonContainer", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset mock functions
+    mockPlayAudio.mockClear();
+    mockStopAudio.mockClear();
+    mockResetPlayback.mockClear();
+    mockGetCurrentState.mockClear();
   });
 
   it("shows loading state initially", () => {
@@ -23,7 +62,27 @@ describe("LessonContainer", () => {
     expect(screen.getByText("Loading lesson...")).toBeInTheDocument();
   });
 
-  it("displays lesson content after successful load", async () => {
+  it("calls LessonService.loadLesson with correct lessonId", () => {
+    (mockLessonService.loadLesson as jest.Mock).mockResolvedValue({
+      success: true,
+      lesson: {
+        id: "test-lesson",
+        title: "Test Lesson",
+        mainLine: {
+          nativeText: "Test",
+          gloss: "Test",
+          audio: { id: "audio-1", filename: "test.mp3" },
+        },
+        phrases: [],
+      },
+    });
+
+    render(<LessonContainer lessonId="test-lesson" />);
+
+    expect(mockLessonService.loadLesson).toHaveBeenCalledWith("test-lesson");
+  });
+
+  it("handles lesson loading success", async () => {
     const mockLesson = {
       id: "test-lesson",
       title: "Test Lesson",
@@ -49,13 +108,20 @@ describe("LessonContainer", () => {
 
     render(<LessonContainer lessonId="test-lesson" />);
 
-    // Wait for the content to appear
-    expect(await screen.findByText("Test Lesson")).toBeInTheDocument();
-    expect(screen.getByText("Main Line")).toBeInTheDocument();
-    expect(screen.getByText("Phrases (1)")).toBeInTheDocument();
+    // Wait for loading to complete
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Loading lesson...")).not.toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+
+    // Should show lesson content
+    expect(screen.getByText("Test Lesson")).toBeInTheDocument();
+    expect(screen.getByText("🎧 Listen First")).toBeInTheDocument();
   });
 
-  it("shows error message when lesson loading fails", async () => {
+  it("handles lesson loading error", async () => {
     (mockLessonService.loadLesson as jest.Mock).mockResolvedValue({
       success: false,
       error: {
@@ -66,29 +132,16 @@ describe("LessonContainer", () => {
 
     render(<LessonContainer lessonId="invalid-lesson" />);
 
-    // Wait for the error to appear
-    expect(await screen.findByText("Error Loading Lesson")).toBeInTheDocument();
-    expect(screen.getByText("Lesson not found")).toBeInTheDocument();
-    expect(screen.getByText("Try Again")).toBeInTheDocument();
-  });
-
-  it("calls LessonService.loadLesson with correct lessonId", () => {
-    (mockLessonService.loadLesson as jest.Mock).mockResolvedValue({
-      success: true,
-      lesson: {
-        id: "test-lesson",
-        title: "Test Lesson",
-        mainLine: {
-          nativeText: "Test",
-          gloss: "Test",
-          audio: { id: "audio-1", filename: "test.mp3" },
-        },
-        phrases: [],
+    // Wait for loading to complete
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Loading lesson...")).not.toBeInTheDocument();
       },
-    });
+      { timeout: 3000 },
+    );
 
-    render(<LessonContainer lessonId="test-lesson" />);
-
-    expect(mockLessonService.loadLesson).toHaveBeenCalledWith("test-lesson");
+    // Should show error message
+    expect(screen.getByText("Error Loading Lesson")).toBeInTheDocument();
+    expect(screen.getByText("Lesson not found")).toBeInTheDocument();
   });
 });
