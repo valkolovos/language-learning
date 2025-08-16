@@ -60,7 +60,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           onClick={handlePlayClick}
           aria-label={`${isPlaying ? "Stop" : "Play"} main line audio`}
         >
-          {isPlaying ? "⏹️" : "▶️"} {getPlayButtonText()}
+          <span aria-hidden="true">{isPlaying ? "⏹️" : "▶️"}</span>{" "}
+          {getPlayButtonText()}
         </button>
       </div>
 

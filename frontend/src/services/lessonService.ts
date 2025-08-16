@@ -1,5 +1,6 @@
 import { Lesson, LessonLoadResult, PartialLesson } from "../types/lesson";
 import { AUDIO_IDS } from "../constants/audio";
+import logger from "./logger";
 
 // Sample lesson data - in a real app, this would come from an API or file system
 const SAMPLE_LESSON: Lesson = {
@@ -283,7 +284,7 @@ export class LessonService {
       return true;
     } catch (error) {
       // Log the error for debugging but return false for validation failure
-      console.warn("Audio validation error:", error);
+      logger.warn("Audio validation error:", error);
       return false;
     }
   }

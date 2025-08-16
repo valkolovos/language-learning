@@ -25,12 +25,27 @@ export class AudioPlaybackService {
   private constructor() {
     // Check if Web Speech API is supported
     if (!window.speechSynthesis) {
-      const errorMessage =
-        "Web Speech API not supported in this browser. " +
+      const userFriendlyMessage =
+        "Speech synthesis is not supported in your browser.";
+      const detailedMessage =
         "This feature requires a modern browser with speech synthesis support. " +
         "Supported browsers include Chrome 33+, Safari 7+, Edge 79+, and Firefox 49+. " +
         "Consider updating your browser or using a supported browser for the best experience.";
-      throw new Error(errorMessage);
+
+      // Create error with user-friendly message and detailed info
+      interface ExtendedError extends Error {
+        userMessage: string;
+        technicalDetails: string;
+        helpUrl: string;
+      }
+
+      const error = new Error(userFriendlyMessage) as ExtendedError;
+      error.userMessage = userFriendlyMessage;
+      error.technicalDetails = detailedMessage;
+      error.helpUrl =
+        "https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API#browser_compatibility";
+
+      throw error;
     }
 
     this.speechSynthesis = window.speechSynthesis;
@@ -164,15 +179,15 @@ export class AudioPlaybackService {
   /**
    * Set the main line audio identifier for this lesson
    *
+   * @warning Changing the main line audio ID resets the play count for the previous
+   * main line and starts fresh counting for the new main line. This affects the
+   * reveal gate mechanism - text will only be revealed after the NEW main line
+   * has been played completely at least 2 times.
+   *
    * This method should be called when:
    * - Switching between different lessons that have different main phrases
    * - Changing the primary learning target within the same lesson
    * - Implementing lesson progression where the main focus changes
-   *
-   * IMPORTANT: Changing the main line audio ID resets the play count for the previous
-   * main line and starts fresh counting for the new main line. This affects the
-   * reveal gate mechanism - text will only be revealed after the NEW main line
-   * has been played completely at least 2 times.
    *
    * @param audioId - The audio ID that represents the main line for the current lesson phase
    */

@@ -54,7 +54,8 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     };
 
     loadLesson();
-  }, [lessonId, resetPlayback]); // Only depend on lessonId and resetPlayback
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]); // Only depend on lessonId - resetPlayback is stable via useCallback
 
   // Handle text reveal
   const handleRevealText = () => {

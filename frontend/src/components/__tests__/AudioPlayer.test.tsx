@@ -33,7 +33,7 @@ describe("AudioPlayer", () => {
     expect(
       screen.getByRole("button", { name: /play main line audio/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText("▶️ Play")).toBeInTheDocument();
+    expect(screen.getByText("Play")).toBeInTheDocument();
   });
 
   it("renders stop button when playing", () => {
@@ -42,7 +42,7 @@ describe("AudioPlayer", () => {
     expect(
       screen.getByRole("button", { name: /stop main line audio/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText("⏹️ Stop")).toBeInTheDocument();
+    expect(screen.getByText("Stop")).toBeInTheDocument();
   });
 
   it("shows correct status text for initial state", () => {
@@ -69,7 +69,7 @@ describe("AudioPlayer", () => {
     render(<AudioPlayer {...defaultProps} error={errorMessage} />);
 
     expect(screen.getByText(`Error: ${errorMessage}`)).toBeInTheDocument();
-    expect(screen.getByText("▶️ Retry")).toBeInTheDocument();
+    expect(screen.getByText("Retry")).toBeInTheDocument();
   });
 
   it("calls onPlay when play button is clicked", () => {
