@@ -1,10 +1,70 @@
-export interface AudioClip {
+export interface BaseAudioClip {
   id: string;
-  filename?: string; // Path to pre-recorded audio file. Omit for TTS-based audio.
-  text: string; // Text to speak for TTS
   duration: number;
   volume: number;
-  language?: string; // Language code for TTS (e.g., 'el-GR' for Greek)
+}
+
+export interface PreRecordedAudioClip extends BaseAudioClip {
+  type: "pre_recorded";
+  filename: string; // Path to pre-recorded audio file
+}
+
+export interface TTSAudioClip extends BaseAudioClip {
+  type: "tts";
+  text: string; // Text to speak for TTS
+  language: string; // Language code for TTS (e.g., 'el-GR' for Greek)
+}
+
+export type AudioClip = PreRecordedAudioClip | TTSAudioClip;
+
+// Type guard functions for convenience
+export function isTTSAudioClip(
+  audioClip: AudioClip,
+): audioClip is TTSAudioClip {
+  return audioClip.type === "tts";
+}
+
+export function isPreRecordedAudioClip(
+  audioClip: AudioClip,
+): audioClip is PreRecordedAudioClip {
+  return audioClip.type === "pre_recorded";
+}
+
+// Interfaces for partially validated lesson data during validation
+export interface PartialAudioClip {
+  id: string;
+  filename?: string;
+  text?: string;
+  language?: string;
+  duration?: number;
+  volume?: number;
+}
+
+export interface PartialMainLine {
+  nativeText: string;
+  gloss: string;
+  tips?: string;
+  audio: PartialAudioClip;
+}
+
+export interface PartialPhrase {
+  id: string;
+  nativeText: string;
+  gloss: string;
+  tips?: string;
+  audio: PartialAudioClip;
+}
+
+export interface PartialLesson {
+  id: string;
+  title: string;
+  mainLine: PartialMainLine;
+  phrases: PartialPhrase[];
+  metadata?: {
+    difficulty?: "beginner" | "intermediate" | "advanced";
+    estimatedDuration?: number;
+    tags?: string[];
+  };
 }
 
 export interface Phrase {

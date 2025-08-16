@@ -1,4 +1,5 @@
 import { AudioPlaybackService } from "../audioPlaybackService";
+import { AudioClip } from "../../types/lesson";
 import { AUDIO_IDS } from "../../constants/audio";
 
 // Mock the Web Speech API
@@ -59,7 +60,8 @@ describe("AudioPlaybackService", () => {
 
   describe("playAudio", () => {
     it("should play audio with TTS when no filename is provided", () => {
-      const audioClip = {
+      const audioClip: AudioClip = {
+        type: "tts",
         id: "test-audio",
         text: "Hello world",
         language: "en-US",
@@ -82,27 +84,26 @@ describe("AudioPlaybackService", () => {
       expect(service.getCurrentState().currentAudioId).toBe("test-audio");
     });
 
-    it("should handle audio with filename (pre-recorded audio)", () => {
-      const audioClip = {
+    it("should reject pre-recorded audio clips", async () => {
+      const audioClip: AudioClip = {
+        type: "pre_recorded",
         id: "test-audio",
         filename: "test.mp3",
-        text: "Hello world", // Required by interface
         duration: 2.5,
         volume: 0.8,
       };
 
-      service.playAudio(audioClip);
-
-      // For pre-recorded audio, we would typically use HTML5 Audio API
-      // Since we're mocking, we just verify the service handles it gracefully
-      expect(service.getCurrentState().currentAudioId).toBe("test-audio");
+      await expect(service.playAudio(audioClip)).rejects.toThrow(
+        "Cannot play pre-recorded audio clip 'test-audio' with TTS service. Use audio playback service instead.",
+      );
     });
 
     it("should emit play_started event when audio starts", () => {
       const mockListener = jest.fn();
       service.addEventListener(mockListener);
 
-      const audioClip = {
+      const audioClip: AudioClip = {
+        type: "tts",
         id: "test-audio",
         text: "Hello world",
         language: "en-US",
@@ -129,7 +130,8 @@ describe("AudioPlaybackService", () => {
       const mockListener = jest.fn();
       service.addEventListener(mockListener);
 
-      const audioClip = {
+      const audioClip: AudioClip = {
+        type: "tts",
         id: "test-audio",
         text: "Hello world",
         language: "en-US",
@@ -153,7 +155,8 @@ describe("AudioPlaybackService", () => {
 
   describe("stopAudio", () => {
     it("should stop current audio playback", () => {
-      const audioClip = {
+      const audioClip: AudioClip = {
+        type: "tts",
         id: "test-audio",
         text: "Hello world",
         language: "en-US",
@@ -174,7 +177,8 @@ describe("AudioPlaybackService", () => {
       const mockListener = jest.fn();
       service.addEventListener(mockListener);
 
-      const audioClip = {
+      const audioClip: AudioClip = {
+        type: "tts",
         id: "test-audio",
         text: "Hello world",
         language: "en-US",
@@ -203,7 +207,8 @@ describe("AudioPlaybackService", () => {
 
   describe("main line audio tracking", () => {
     it("should increment play count for main line audio", () => {
-      const mainLineAudio = {
+      const mainLineAudio: AudioClip = {
+        type: "tts",
         id: AUDIO_IDS.MAIN_LINE,
         text: "Hello world",
         language: "en-US",
@@ -220,7 +225,8 @@ describe("AudioPlaybackService", () => {
     });
 
     it("should not increment play count for non-main line audio", () => {
-      const phraseAudio = {
+      const phraseAudio: AudioClip = {
+        type: "tts",
         id: AUDIO_IDS.PHRASE_1,
         text: "Hello world",
         language: "en-US",
@@ -237,7 +243,8 @@ describe("AudioPlaybackService", () => {
     });
 
     it("should enable text reveal after 2 complete plays of main line", () => {
-      const mainLineAudio = {
+      const mainLineAudio: AudioClip = {
+        type: "tts",
         id: AUDIO_IDS.MAIN_LINE,
         text: "Hello world",
         language: "en-US",
@@ -288,7 +295,8 @@ describe("AudioPlaybackService", () => {
       const mockListener = jest.fn();
       service.addEventListener(mockListener);
 
-      const audioClip = {
+      const audioClip: AudioClip = {
+        type: "tts",
         id: "test-audio",
         text: "Hello world",
         language: "en-US",

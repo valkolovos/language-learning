@@ -82,6 +82,7 @@ describe("useAudioPlayback", () => {
       const { result } = renderHook(() => useAudioPlayback());
 
       const audioClip: AudioClip = {
+        type: "tts",
         id: "test-audio",
         text: "Hello world",
         language: "en-US",
@@ -152,6 +153,7 @@ describe("useAudioPlayback", () => {
       await expect(async () => {
         await act(async () => {
           await result.current.playAudio({
+            type: "tts",
             id: "test-audio",
             text: "Hello world",
             language: "en-US",

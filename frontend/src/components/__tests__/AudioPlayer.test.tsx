@@ -4,10 +4,12 @@ import { AudioPlayer } from "../AudioPlayer";
 import { AudioClip } from "../../types/lesson";
 
 const mockAudioClip: AudioClip = {
+  type: "tts",
   id: "test-audio",
   text: "Hello world",
   duration: 2.0,
   volume: 0.8,
+  language: "en-US",
 };
 
 describe("AudioPlayer", () => {

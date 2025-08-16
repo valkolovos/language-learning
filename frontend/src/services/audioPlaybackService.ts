@@ -2,6 +2,7 @@ import {
   AudioClip,
   AudioPlaybackState,
   AudioPlaybackEvent,
+  isTTSAudioClip,
 } from "../types/lesson";
 import {
   AUDIO_IDS,
@@ -24,7 +25,12 @@ export class AudioPlaybackService {
   private constructor() {
     // Check if Web Speech API is supported
     if (!window.speechSynthesis) {
-      throw new Error("Web Speech API not supported in this browser");
+      const errorMessage =
+        "Web Speech API not supported in this browser. " +
+        "This feature requires a modern browser with speech synthesis support. " +
+        "Supported browsers include Chrome 33+, Safari 7+, Edge 79+, and Firefox 49+. " +
+        "Consider updating your browser or using a supported browser for the best experience.";
+      throw new Error(errorMessage);
     }
 
     this.speechSynthesis = window.speechSynthesis;
@@ -39,18 +45,25 @@ export class AudioPlaybackService {
 
   /**
    * Play audio using text-to-speech
+   * Note: This service only supports TTS-based audio clips
    */
   async playAudio(audioClip: AudioClip): Promise<void> {
     try {
       // Stop any currently playing audio
       this.stopAudio();
 
+      // Validate that this is a TTS audio clip
+      if (!isTTSAudioClip(audioClip)) {
+        throw new Error(
+          `Cannot play pre-recorded audio clip '${audioClip.id}' with TTS service. Use audio playback service instead.`,
+        );
+      }
+
       // Create new utterance
       this.currentUtterance = new SpeechSynthesisUtterance(audioClip.text);
 
       // Configure TTS settings
-      this.currentUtterance.lang =
-        audioClip.language || AUDIO_SETTINGS.DEFAULT_LANGUAGE;
+      this.currentUtterance.lang = audioClip.language;
       this.currentUtterance.volume = audioClip.volume;
       this.currentUtterance.rate = AUDIO_SETTINGS.DEFAULT_RATE; // Slightly slower for language learning
       this.currentUtterance.pitch = AUDIO_SETTINGS.DEFAULT_PITCH;
@@ -150,7 +163,18 @@ export class AudioPlaybackService {
 
   /**
    * Set the main line audio identifier for this lesson
-   * @param audioId - The audio ID that represents the main line
+   *
+   * This method should be called when:
+   * - Switching between different lessons that have different main phrases
+   * - Changing the primary learning target within the same lesson
+   * - Implementing lesson progression where the main focus changes
+   *
+   * IMPORTANT: Changing the main line audio ID resets the play count for the previous
+   * main line and starts fresh counting for the new main line. This affects the
+   * reveal gate mechanism - text will only be revealed after the NEW main line
+   * has been played completely at least 2 times.
+   *
+   * @param audioId - The audio ID that represents the main line for the current lesson phase
    */
   setMainLineAudioId(audioId: string): void {
     this.mainLineAudioId = audioId;

@@ -1,4 +1,4 @@
-import { Lesson, LessonLoadResult } from "../types/lesson";
+import { Lesson, LessonLoadResult, PartialLesson } from "../types/lesson";
 import { AUDIO_IDS } from "../constants/audio";
 
 // Sample lesson data - in a real app, this would come from an API or file system
@@ -10,6 +10,7 @@ const SAMPLE_LESSON: Lesson = {
     gloss: "Hello, how are you?",
     tips: "A friendly greeting in Greek",
     audio: {
+      type: "tts",
       id: AUDIO_IDS.MAIN_LINE,
       text: "Γειά σου, πώς είσαι;",
       duration: 2.3,
@@ -24,6 +25,7 @@ const SAMPLE_LESSON: Lesson = {
       gloss: "Hello",
       tips: 'Informal greeting, pronounced "ya soo"',
       audio: {
+        type: "tts",
         id: AUDIO_IDS.PHRASE_1,
         text: "Γειά σου",
         duration: 1.0,
@@ -37,6 +39,7 @@ const SAMPLE_LESSON: Lesson = {
       gloss: "how are you?",
       tips: 'Question form, literally "how are you?"',
       audio: {
+        type: "tts",
         id: AUDIO_IDS.PHRASE_2,
         text: "πώς είσαι;",
         duration: 1.3,
@@ -50,6 +53,7 @@ const SAMPLE_LESSON: Lesson = {
       gloss: "Good, thank you",
       tips: 'Common response to "how are you?"',
       audio: {
+        type: "tts",
         id: AUDIO_IDS.PHRASE_3,
         text: "Καλά, ευχαριστώ",
         duration: 1.4,
@@ -131,11 +135,11 @@ export class LessonService {
         };
       }
 
-      // Cast to a more specific type for validation
-      const lessonObj = lesson as Record<string, unknown>;
+      // Cast to PartialLesson for validation
+      const lessonObj = lesson as PartialLesson;
 
       // Check required fields
-      if (!lessonObj.id || typeof lessonObj.id !== "string") {
+      if (!lessonObj.id) {
         return {
           success: false,
           error: {
@@ -146,7 +150,7 @@ export class LessonService {
         };
       }
 
-      if (!lessonObj.title || typeof lessonObj.title !== "string") {
+      if (!lessonObj.title) {
         return {
           success: false,
           error: {
@@ -157,7 +161,7 @@ export class LessonService {
         };
       }
 
-      if (!lessonObj.mainLine || typeof lessonObj.mainLine !== "object") {
+      if (!lessonObj.mainLine) {
         return {
           success: false,
           error: {
@@ -168,8 +172,11 @@ export class LessonService {
         };
       }
 
-      const mainLine = lessonObj.mainLine as Record<string, unknown>;
-      if (!mainLine.nativeText || !mainLine.gloss || !mainLine.audio) {
+      if (
+        !lessonObj.mainLine.nativeText ||
+        !lessonObj.mainLine.gloss ||
+        !lessonObj.mainLine.audio
+      ) {
         return {
           success: false,
           error: {
@@ -193,7 +200,7 @@ export class LessonService {
 
       // Validate each phrase
       for (let i = 0; i < lessonObj.phrases.length; i++) {
-        const phrase = lessonObj.phrases[i] as Record<string, unknown>;
+        const phrase = lessonObj.phrases[i];
         if (
           !phrase.id ||
           !phrase.nativeText ||
@@ -250,11 +257,10 @@ export class LessonService {
    * @param lesson - The lesson object to validate
    * @returns boolean - True if all audio files are valid
    */
-  private static validateAudioFiles(lesson: Record<string, unknown>): boolean {
+  private static validateAudioFiles(lesson: PartialLesson): boolean {
     try {
       // Check main line audio - must have id and either filename (pre-recorded) or text+language (TTS)
-      const mainLine = lesson.mainLine as Record<string, unknown>;
-      const mainAudio = mainLine.audio as Record<string, unknown>;
+      const mainAudio = lesson.mainLine.audio;
       if (
         !mainAudio.id ||
         (!mainAudio.filename && (!mainAudio.text || !mainAudio.language))
@@ -263,9 +269,8 @@ export class LessonService {
       }
 
       // Check phrase audio files - must have id and either filename (pre-recorded) or text+language (TTS)
-      const phrases = lesson.phrases as Array<Record<string, unknown>>;
-      for (const phrase of phrases) {
-        const phraseAudio = phrase.audio as Record<string, unknown>;
+      for (const phrase of lesson.phrases) {
+        const phraseAudio = phrase.audio;
         if (
           !phraseAudio.id ||
           (!phraseAudio.filename &&
