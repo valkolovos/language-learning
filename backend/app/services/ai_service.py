@@ -325,7 +325,7 @@ class AIService:
                     target_language=target_language,
                     model=settings.AI_MODEL_NAME,
                     response_choices_count=len(response.choices),
-                    response_usage=response.usage.dict() if response.usage else None,
+                    response_usage=self._get_usage_info(response.usage) if response.usage else None,
                 )
                 return {
                     "error": "AI model returned empty content",
@@ -424,7 +424,7 @@ class AIService:
                     exercise_count=exercise_count,
                     model=settings.AI_MODEL_NAME,
                     response_choices_count=len(response.choices),
-                    response_usage=response.usage.dict() if response.usage else None,
+                    response_usage=self._get_usage_info(response.usage) if response.usage else None,
                 )
                 return {
                     "error": "AI model returned empty content for exercises",
@@ -692,6 +692,34 @@ class AIService:
         except Exception as e:
             logger.error("Failed to parse exercises", error=str(e), content_preview=content[:200])
             return []
+
+    def _get_usage_info(self, usage: Any) -> Dict[str, Any]:
+        """Safely extract usage information from OpenAI response."""
+        try:
+            # Try the modern method first
+            if hasattr(usage, "model_dump"):
+                result = usage.model_dump()
+                if isinstance(result, dict):
+                    return result
+                else:
+                    return {"error": "model_dump() returned non-dict"}
+            # Fallback to the older method
+            elif hasattr(usage, "dict"):
+                result = usage.dict()
+                if isinstance(result, dict):
+                    return result
+                else:
+                    return {"error": "dict() returned non-dict"}
+            # Fallback to accessing attributes directly
+            else:
+                return {
+                    "prompt_tokens": getattr(usage, "prompt_tokens", None),
+                    "completion_tokens": getattr(usage, "completion_tokens", None),
+                    "total_tokens": getattr(usage, "total_tokens", None),
+                }
+        except Exception as e:
+            logger.warning("Failed to extract usage information", error=str(e))
+            return {"error": f"Failed to extract usage: {str(e)}"}
 
     def _validate_openai_api_key(self, api_key: Optional[str]) -> bool:
         """Validate OpenAI API key format and presence."""
