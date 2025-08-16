@@ -1,0 +1,862 @@
+"""
+AI service integration for language learning features.
+
+Maintenance Notes:
+- OpenAI API key validation rules are configurable in app/core/config.py
+- Last verified format: 2024 (sk- prefix, typically 51 characters)
+- To update validation rules: modify settings in config.py and update "Last verified" comment
+- Runtime updates available via update_validation_rules() method
+- Check https://platform.openai.com/docs/api-keys for current format
+"""
+
+import json
+import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+# OpenAI imports
+import openai
+import structlog
+from google.auth import default
+
+# Google Cloud imports
+from google.cloud import aiplatform, speech, texttospeech, translate
+
+from app.core.config import settings
+from app.core.logging import log_ai_interaction
+
+logger = structlog.get_logger(__name__)
+
+
+class AIService:
+    """AI service for language learning features.
+
+    Note: This service implements conditional logging for expensive operations
+    like usage information extraction. The _get_usage_info method is only called
+    when error logging is enabled to avoid unnecessary processing overhead.
+    """
+
+    def __init__(self) -> None:
+        """Initialize AI service with credentials."""
+        self.google_project = settings.GOOGLE_CLOUD_PROJECT
+        self.openai_client: Optional[openai.AsyncOpenAI] = None
+        self.translate_client: Optional[translate.TranslationServiceClient] = None
+        self.tts_client: Optional[texttospeech.TextToSpeechClient] = None
+        self.speech_client: Optional[speech.SpeechClient] = None
+
+        # Initialize Google Cloud clients
+        self._initialize_google_cloud_services()
+
+        # Initialize OpenAI client
+        self._initialize_openai_client()
+
+    def _initialize_google_cloud_services(self) -> None:
+        """Initialize Google Cloud services with proper error handling."""
+        try:
+            credentials, project = default()
+            logger.info("Google Cloud credentials obtained successfully")
+        except Exception as e:
+            logger.error("Failed to obtain Google Cloud credentials", error=str(e))
+            return
+
+        # Initialize Translation Service
+        self.translate_client = self._initialize_translate_client()
+
+        # Initialize Text-to-Speech Service
+        self.tts_client = self._initialize_tts_client()
+
+        # Initialize Speech-to-Text Service
+        self.speech_client = self._initialize_speech_client()
+
+        # Initialize Vertex AI
+        self._initialize_vertex_ai()
+
+        # Log summary of initialization status
+        services_status = {
+            "translation": self.translate_client is not None,
+            "text_to_speech": self.tts_client is not None,
+            "speech_to_text": self.speech_client is not None,
+        }
+        logger.info("Google Cloud services initialization summary", services_status=services_status)
+
+    def _initialize_translate_client(self) -> Optional[translate.TranslationServiceClient]:
+        """Initialize Google Cloud Translation service client."""
+        try:
+            client = translate.TranslationServiceClient()
+            logger.info("Google Cloud Translation service initialized successfully")
+            return client
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Translation service", error=str(e))
+            return None
+
+    def _initialize_tts_client(self) -> Optional[texttospeech.TextToSpeechClient]:
+        """Initialize Google Cloud Text-to-Speech service client."""
+        try:
+            client = texttospeech.TextToSpeechClient()
+            logger.info("Google Cloud Text-to-Speech service initialized successfully")
+            return client
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Text-to-Speech service", error=str(e))
+            return None
+
+    def _initialize_speech_client(self) -> Optional[speech.SpeechClient]:
+        """Initialize Google Cloud Speech-to-Text service client."""
+        try:
+            client = speech.SpeechClient()
+            logger.info("Google Cloud Speech-to-Text service initialized successfully")
+            return client
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Speech-to-Text service", error=str(e))
+            return None
+
+    def _initialize_vertex_ai(self) -> None:
+        """Initialize Google Cloud Vertex AI."""
+        try:
+            aiplatform.init(project=self.google_project, location="us-central1")
+            logger.info("Google Cloud Vertex AI initialized successfully")
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Vertex AI", error=str(e))
+
+    def _initialize_openai_client(self) -> None:
+        """Initialize OpenAI client with validation."""
+        try:
+            # Safely get the OpenAI API key from settings
+            openai_api_key = getattr(settings, "OPENAI_API_KEY", None)
+
+            if self._validate_openai_api_key(openai_api_key):
+                try:
+                    self.openai_client = openai.AsyncOpenAI(api_key=openai_api_key)
+                    logger.info("OpenAI client initialized successfully")
+                except Exception as e:
+                    logger.error("Failed to initialize OpenAI client", error=str(e))
+            else:
+                logger.warning("OpenAI API key is missing or invalid - OpenAI features will be disabled")
+        except AttributeError as e:
+            logger.error("Failed to access OpenAI API key from settings", error=str(e))
+            logger.warning("OpenAI features will be disabled due to configuration error")
+        except Exception as e:
+            logger.error("Unexpected error during OpenAI client initialization", error=str(e))
+            logger.warning("OpenAI features will be disabled due to initialization error")
+
+    async def translate_text(self, text: str, source_language: str, target_language: str) -> Dict[str, Any]:
+        """Translate text using Google Cloud Translate."""
+        if not self.translate_client:
+            return {"error": "Translation service not available"}
+
+        try:
+            start_time = datetime.now()
+
+            # Perform translation
+            response = self.translate_client.translate_text(
+                request={
+                    "parent": f"projects/{self.google_project}/locations/global",
+                    "contents": [text],
+                    "mime_type": "text/plain",
+                    "source_language_code": source_language,
+                    "target_language_code": target_language,
+                }
+            )
+
+            translation = response.translations[0].translated_text
+            processing_time = (datetime.now() - start_time).total_seconds()
+
+            log_ai_interaction(
+                interaction_type="translation",
+                model="google_translate",
+                source_language=source_language,
+                target_language=target_language,
+                text_length=len(text),
+                processing_time=processing_time,
+            )
+
+            return {
+                "translated_text": translation,
+                "source_language": source_language,
+                "target_language": target_language,
+                "confidence": 0.95,  # Google Translate doesn't provide confidence scores
+                "processing_time": processing_time,
+            }
+
+        except Exception as e:
+            logger.error("Translation failed", error=str(e), text=text)
+            return {"error": f"Translation failed: {str(e)}"}
+
+    async def text_to_speech(self, text: str, language_code: str, voice_name: Optional[str] = None) -> Dict[str, Any]:
+        """Convert text to speech using Google Cloud Text-to-Speech."""
+        if not self.tts_client:
+            return {"error": "Text-to-speech service not available"}
+
+        try:
+            start_time = datetime.now()
+
+            # Set up voice selection
+            if not voice_name:
+                # Default voice selection based on language
+                voice_name = self._get_default_voice(language_code)
+
+            # Configure synthesis input
+            synthesis_input = texttospeech.SynthesisInput(text=text)
+
+            # Configure voice
+            voice = texttospeech.VoiceSelectionParams(
+                language_code=language_code,
+                name=voice_name,
+                ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL,
+            )
+
+            # Configure audio
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3,
+                speaking_rate=0.8,  # Slightly slower for language learning
+                pitch=0.0,
+            )
+
+            # Perform synthesis
+            response = self.tts_client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
+
+            processing_time = (datetime.now() - start_time).total_seconds()
+
+            log_ai_interaction(
+                interaction_type="text_to_speech",
+                model="google_tts",
+                language_code=language_code,
+                voice_name=voice_name,
+                text_length=len(text),
+                processing_time=processing_time,
+            )
+
+            return {
+                "audio_content": response.audio_content,
+                "language_code": language_code,
+                "voice_name": voice_name,
+                "processing_time": processing_time,
+                "audio_format": "mp3",
+            }
+
+        except Exception as e:
+            logger.error("Text-to-speech failed", error=str(e), text=text)
+            return {"error": f"Text-to-speech failed: {str(e)}"}
+
+    async def speech_to_text(self, audio_content: bytes, language_code: str) -> Dict[str, Any]:
+        """Convert speech to text using Google Cloud Speech-to-Text."""
+        if not self.speech_client:
+            return {"error": "Speech-to-text service not available"}
+
+        try:
+            start_time = datetime.now()
+
+            # Configure audio
+            audio = speech.RecognitionAudio(content=audio_content)
+
+            # Configure recognition
+            config = speech.RecognitionConfig(
+                encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+                sample_rate_hertz=16000,
+                language_code=language_code,
+                enable_automatic_punctuation=True,
+                enable_word_time_offsets=True,
+                model="latest_long",  # Better for longer audio
+            )
+
+            # Perform recognition
+            response = self.speech_client.recognize(config=config, audio=audio)
+
+            processing_time = (datetime.now() - start_time).total_seconds()
+
+            # Extract results
+            transcriptions = []
+            for result in response.results:
+                transcriptions.append(
+                    {
+                        "transcript": result.alternatives[0].transcript,
+                        "confidence": result.alternatives[0].confidence,
+                        "words": (
+                            [
+                                {
+                                    "word": word.word,
+                                    "start_time": word.start_time.total_seconds(),
+                                    "end_time": word.end_time.total_seconds(),
+                                }
+                                for word in result.alternatives[0].words
+                            ]
+                            if hasattr(result.alternatives[0], "words")
+                            else []
+                        ),
+                    }
+                )
+
+            log_ai_interaction(
+                interaction_type="speech_to_text",
+                model="google_speech",
+                language_code=language_code,
+                audio_length=len(audio_content),
+                processing_time=processing_time,
+            )
+
+            return {
+                "transcriptions": transcriptions,
+                "language_code": language_code,
+                "processing_time": processing_time,
+                "best_transcript": (transcriptions[0]["transcript"] if transcriptions else ""),
+            }
+
+        except Exception as e:
+            logger.error("Speech-to-text failed", error=str(e))
+            return {"error": f"Speech-to-text failed: {str(e)}"}
+
+    async def generate_lesson_content(
+        self,
+        topic: str,
+        difficulty_level: str,
+        target_language: str,
+        native_language: str = "en",
+    ) -> Dict[str, Any]:
+        """Generate lesson content using OpenAI."""
+        if not self.openai_client:
+            return {"error": "OpenAI service not available"}
+
+        try:
+            start_time = datetime.now()
+
+            # Create prompt for lesson generation
+            prompt = self._create_lesson_prompt(topic, difficulty_level, target_language, native_language)
+
+            # Generate content using OpenAI
+            response = await self.openai_client.chat.completions.create(
+                model=settings.AI_MODEL_NAME,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are an expert language teacher specializing in creating "
+                            "engaging, research-based language learning content."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.7,
+                max_tokens=2000,
+            )
+
+            # Parse response
+            content = response.choices[0].message.content
+            if not content:
+                # Only call _get_usage_info if error logging is enabled
+                usage_info = None
+                if logger.isEnabledFor(logging.ERROR):
+                    usage_info = self._get_usage_info(response.usage) if response.usage else None
+
+                logger.error(
+                    "AI model returned empty content",
+                    topic=topic,
+                    difficulty_level=difficulty_level,
+                    target_language=target_language,
+                    model=settings.AI_MODEL_NAME,
+                    response_choices_count=len(response.choices),
+                    response_usage=usage_info,
+                )
+                return {
+                    "error": "AI model returned empty content",
+                    "details": {
+                        "model": settings.AI_MODEL_NAME,
+                        "topic": topic,
+                        "difficulty_level": difficulty_level,
+                        "target_language": target_language,
+                        "suggestion": "Try adjusting the prompt or model parameters",
+                    },
+                }
+
+            processing_time = (datetime.now() - start_time).total_seconds()
+
+            # Parse the generated content
+            lesson_content = self._parse_lesson_content(content)
+
+            # Check if parsing failed
+            if "error" in lesson_content:
+                logger.error(
+                    "Failed to parse AI-generated lesson content",
+                    topic=topic,
+                    difficulty_level=difficulty_level,
+                    target_language=target_language,
+                    model=settings.AI_MODEL_NAME,
+                    raw_content_length=len(content),
+                    raw_content_preview=content[:200] + "..." if len(content) > 200 else content,
+                )
+                return {
+                    "error": "Failed to parse AI-generated lesson content",
+                    "details": {
+                        "model": settings.AI_MODEL_NAME,
+                        "topic": topic,
+                        "difficulty_level": difficulty_level,
+                        "target_language": target_language,
+                        "parsing_error": lesson_content["error"],
+                        "raw_content_length": len(content),
+                        "raw_content_preview": content[:200] + "..." if len(content) > 200 else content,
+                        "suggestion": "Check if the AI model is generating valid JSON format",
+                    },
+                }
+
+            log_ai_interaction(
+                interaction_type="lesson_generation",
+                model=settings.AI_MODEL_NAME,
+                topic=topic,
+                difficulty_level=difficulty_level,
+                target_language=target_language,
+                processing_time=processing_time,
+            )
+
+            return {
+                "lesson_content": lesson_content,
+                "topic": topic,
+                "difficulty_level": difficulty_level,
+                "target_language": target_language,
+                "processing_time": processing_time,
+            }
+
+        except Exception as e:
+            logger.error("Lesson generation failed", error=str(e), topic=topic)
+            return {"error": f"Lesson generation failed: {str(e)}"}
+
+    async def generate_exercises(self, lesson_content: Dict[str, Any], exercise_count: int = 5) -> Dict[str, Any]:
+        """Generate exercises based on lesson content."""
+        if not self.openai_client:
+            return {"error": "OpenAI service not available"}
+
+        try:
+            start_time = datetime.now()
+
+            # Create prompt for exercise generation
+            prompt = self._create_exercise_prompt(lesson_content, exercise_count)
+
+            # Generate exercises
+            response = await self.openai_client.chat.completions.create(
+                model=settings.AI_MODEL_NAME,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are an expert language teacher creating engaging " "exercises for language learning."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.8,
+                max_tokens=1500,
+            )
+
+            content = response.choices[0].message.content
+            if not content:
+                # Only call _get_usage_info if error logging is enabled
+                usage_info = None
+                if logger.isEnabledFor(logging.ERROR):
+                    usage_info = self._get_usage_info(response.usage) if response.usage else None
+
+                logger.error(
+                    "AI model returned empty content for exercises",
+                    lesson_title=lesson_content.get("title", "Unknown"),
+                    exercise_count=exercise_count,
+                    model=settings.AI_MODEL_NAME,
+                    response_choices_count=len(response.choices),
+                    response_usage=usage_info,
+                )
+                return {
+                    "error": "AI model returned empty content for exercises",
+                    "details": {
+                        "model": settings.AI_MODEL_NAME,
+                        "lesson_title": lesson_content.get("title", "Unknown"),
+                        "exercise_count": exercise_count,
+                        "suggestion": "Try adjusting the prompt or model parameters",
+                    },
+                }
+
+            processing_time = (datetime.now() - start_time).total_seconds()
+
+            # Parse exercises
+            exercises = self._parse_exercises(content)
+
+            # Check if parsing failed or returned empty exercises
+            if not exercises:
+                logger.error(
+                    "Failed to parse AI-generated exercises or no exercises generated",
+                    lesson_title=lesson_content.get("title", "Unknown"),
+                    exercise_count=exercise_count,
+                    model=settings.AI_MODEL_NAME,
+                    raw_content_length=len(content),
+                    raw_content_preview=content[:200] + "..." if len(content) > 200 else content,
+                )
+                return {
+                    "error": "Failed to parse AI-generated exercises or no exercises generated",
+                    "details": {
+                        "model": settings.AI_MODEL_NAME,
+                        "lesson_title": lesson_content.get("title", "Unknown"),
+                        "exercise_count": exercise_count,
+                        "raw_content_length": len(content),
+                        "raw_content_preview": content[:200] + "..." if len(content) > 200 else content,
+                        "suggestion": "Check if the AI model is generating valid JSON format with exercises array",
+                    },
+                }
+
+            log_ai_interaction(
+                interaction_type="exercise_generation",
+                model=settings.AI_MODEL_NAME,
+                exercise_count=exercise_count,
+                processing_time=processing_time,
+            )
+
+            return {
+                "exercises": exercises,
+                "exercise_count": len(exercises),
+                "processing_time": processing_time,
+            }
+
+        except Exception as e:
+            logger.error("Exercise generation failed", error=str(e))
+            return {"error": f"Exercise generation failed: {str(e)}"}
+
+    def _get_default_voice(self, language_code: str) -> str:
+        """Get default voice for language."""
+        voice_mapping = {
+            "en-US": "en-US-Standard-A",
+            "es-ES": "es-ES-Standard-A",
+            "fr-FR": "fr-FR-Standard-A",
+            "de-DE": "de-DE-Standard-A",
+            "it-IT": "it-IT-Standard-A",
+            "pt-BR": "pt-BR-Standard-A",
+            "ja-JP": "ja-JP-Standard-A",
+            "ko-KR": "ko-KR-Standard-A",
+            "zh-CN": "cmn-CN-Standard-A",
+        }
+        return voice_mapping.get(language_code, "en-US-Standard-A")
+
+    def _create_lesson_prompt(
+        self,
+        topic: str,
+        difficulty_level: str,
+        target_language: str,
+        native_language: str,
+    ) -> str:
+        """Create prompt for lesson generation."""
+        return f"""
+        Create a comprehensive language lesson in {target_language} for {native_language} speakers.
+
+        Topic: {topic}
+        Difficulty Level: {difficulty_level}
+
+        Please provide the lesson in the following JSON format:
+        {{
+            "title": "Lesson title",
+            "description": "Brief description",
+            "learning_objectives": ["objective1", "objective2"],
+            "vocabulary": [
+                {{
+                    "word": "word_in_target_language",
+                    "translation": "translation_in_native_language",
+                    "example_sentence": "example_sentence",
+                    "pronunciation": "phonetic_pronunciation"
+                }}
+            ],
+            "grammar_points": [
+                {{
+                    "concept": "grammar_concept",
+                    "explanation": "explanation_in_native_language",
+                    "examples": ["example1", "example2"],
+                    "practice_sentences": ["sentence1", "sentence2"]
+                }}
+            ],
+            "conversation_practice": [
+                {{
+                    "scenario": "conversation_scenario",
+                    "dialogue": [
+                        {{
+                            "speaker": "speaker_name",
+                            "text": "text_in_target_language",
+                            "translation": "translation_in_native_language"
+                        }}
+                    ]
+                }}
+            ],
+            "cultural_notes": ["note1", "note2"],
+            "estimated_duration": "estimated_time_in_minutes"
+        }}
+
+        Make the content engaging, practical, and appropriate for {difficulty_level} level learners.
+        """
+
+    def _create_exercise_prompt(self, lesson_content: Dict[str, Any], exercise_count: int) -> str:
+        """Create prompt for exercise generation."""
+        return f"""
+        Based on this lesson content, create {exercise_count} diverse exercises:
+
+        Lesson: {lesson_content.get('title', 'Unknown')}
+
+        Please create exercises in this JSON format:
+        {{
+            "exercises": [
+                {{
+                    "title": "Exercise title",
+                    "type": "multiple_choice|fill_blank|matching|speaking|listening",
+                    "description": "Exercise description",
+                    "content": {{
+                        "question": "Question or instruction",
+                        "options": ["option1", "option2", "option3", "option4"],  # for multiple choice
+                        "correct_answer": "correct_answer_or_index",
+                        "hints": ["hint1", "hint2"],
+                        "explanation": "Explanation of correct answer"
+                    }},
+                    "difficulty_score": 1.0,
+                    "base_xp": 25
+                }}
+            ]
+        }}
+
+        Include a mix of exercise types and ensure they test different aspects of the lesson content.
+        """
+
+    def _parse_lesson_content(self, content: str) -> Dict[str, Any]:
+        """Parse generated lesson content."""
+        try:
+            # Try to extract JSON from the response
+            if "```json" in content:
+                json_start = content.find("```json") + 7
+                json_end = content.find("```", json_start)
+                if json_end == -1:
+                    logger.error("Failed to find closing ``` for JSON code block", content_preview=content[:200])
+                    return {"error": "Malformed JSON code block - missing closing ```"}
+                json_content = content[json_start:json_end].strip()
+            else:
+                # Try to find JSON in the content
+                json_start = content.find("{")
+                if json_start == -1:
+                    logger.error("No opening brace found in content", content_preview=content[:200])
+                    return {"error": "No JSON content found - missing opening brace"}
+
+                json_end = content.rfind("}")
+                if json_end == -1:
+                    logger.error("No closing brace found in content", content_preview=content[:200])
+                    return {"error": "No JSON content found - missing closing brace"}
+
+                json_content = content[json_start : json_end + 1]
+
+            if not json_content.strip():
+                logger.error("Extracted JSON content is empty", content_preview=content[:200])
+                return {"error": "Extracted JSON content is empty"}
+
+            result: Dict[str, Any] = json.loads(json_content)
+
+            # Validate that we have the expected structure
+            required_fields = ["title", "vocabulary", "grammar_points"]
+            missing_fields = [field for field in required_fields if field not in result]
+
+            if missing_fields:
+                logger.warning(
+                    "Generated lesson content missing required fields",
+                    missing_fields=missing_fields,
+                    available_fields=list(result.keys()),
+                    content_preview=content[:200],
+                )
+                # Don't return error for missing fields, just log warning
+
+            return result
+
+        except json.JSONDecodeError as e:
+            logger.error(
+                "Failed to parse lesson content as JSON",
+                error=str(e),
+                error_position=f"Line {e.lineno}, Column {e.colno}",
+                content_preview=content[:200],
+                json_content_preview=json_content[:200] if "json_content" in locals() else "N/A",
+            )
+            return {"error": f"Invalid JSON format: {str(e)} at line {e.lineno}, column {e.colno}"}
+        except Exception as e:
+            logger.error("Failed to parse lesson content", error=str(e), content_preview=content[:200])
+            return {"error": f"Failed to parse generated content: {str(e)}"}
+
+    def _parse_exercises(self, content: str) -> List[Dict[str, Any]]:
+        """Parse generated exercises."""
+        try:
+            # Similar parsing logic for exercises
+            if "```json" in content:
+                json_start = content.find("```json") + 7
+                json_end = content.find("```", json_start)
+                if json_end == -1:
+                    logger.error(
+                        "Failed to find closing ``` for exercises JSON code block", content_preview=content[:200]
+                    )
+                    return []
+                json_content = content[json_start:json_end].strip()
+            else:
+                json_start = content.find("{")
+                if json_start == -1:
+                    logger.error("No opening brace found in exercises content", content_preview=content[:200])
+                    return []
+
+                json_end = content.rfind("}")
+                if json_end == -1:
+                    logger.error("No closing brace found in exercises content", content_preview=content[:200])
+                    return []
+
+                json_content = content[json_start : json_end + 1]
+
+            if not json_content.strip():
+                logger.error("Extracted exercises JSON content is empty", content_preview=content[:200])
+                return []
+
+            parsed: Dict[str, Any] = json.loads(json_content)
+            exercises: List[Dict[str, Any]] = parsed.get("exercises", [])
+
+            if not exercises:
+                logger.warning(
+                    "No exercises found in parsed content",
+                    available_keys=list(parsed.keys()),
+                    content_preview=content[:200],
+                )
+
+            return exercises
+
+        except json.JSONDecodeError as e:
+            logger.error(
+                "Failed to parse exercises as JSON",
+                error=str(e),
+                error_position=f"Line {e.lineno}, Column {e.colno}",
+                content_preview=content[:200],
+                json_content_preview=json_content[:200] if "json_content" in locals() else "N/A",
+            )
+            return []
+        except Exception as e:
+            logger.error("Failed to parse exercises", error=str(e), content_preview=content[:200])
+            return []
+
+    def _get_usage_info(self, usage: Any) -> Dict[str, Any]:
+        """Safely extract usage information from OpenAI response.
+
+        This method is called conditionally only when error logging is enabled
+        to avoid unnecessary processing overhead during normal operation.
+        """
+        if usage is None:
+            return {"error": "No usage information available"}
+
+        try:
+            # Try the modern method first (OpenAI Python client v1.0+)
+            if hasattr(usage, "model_dump"):
+                result = usage.model_dump()
+                if isinstance(result, dict):
+                    return result
+                else:
+                    return {"error": "model_dump() returned non-dict"}
+
+            # Fallback to the older method (OpenAI Python client < v1.0)
+            elif hasattr(usage, "dict"):
+                result = usage.dict()
+                if isinstance(result, dict):
+                    return result
+                else:
+                    return {"error": "dict() returned non-dict"}
+
+            # Fallback to accessing attributes directly
+            else:
+                return {
+                    "prompt_tokens": getattr(usage, "prompt_tokens", None),
+                    "completion_tokens": getattr(usage, "completion_tokens", None),
+                    "total_tokens": getattr(usage, "total_tokens", None),
+                }
+        except Exception as e:
+            # Use a simple error message to avoid recursive logging issues
+            return {"error": f"Failed to extract usage: {str(e)}"}
+
+    def _validate_openai_api_key(self, api_key: Optional[str]) -> bool:
+        """Validate OpenAI API key format and presence.
+
+        Note: This validation is based on OpenAI API key format as of 2024.
+        OpenAI may change their key format in the future, which would require
+        updating these validation rules.
+
+        Last verified: 2024
+        OpenAI API key format:
+        - Start with 'sk-' prefix (3 characters)
+        - Are typically 51 characters total length
+        - Have a minimum reasonable length of 20 characters
+
+        For the most current format, check: https://platform.openai.com/docs/api-keys
+        """
+        # Use configurable validation settings from config
+        OPENAI_API_KEY_PREFIX = settings.OPENAI_API_KEY_PREFIX
+        OPENAI_API_KEY_TYPICAL_LENGTH = settings.OPENAI_API_KEY_TYPICAL_LENGTH
+        OPENAI_API_KEY_MIN_LENGTH = settings.OPENAI_API_KEY_MIN_LENGTH
+
+        if not api_key:
+            logger.warning("OpenAI API key is not set")
+            return False
+
+        # Remove any whitespace
+        api_key = api_key.strip()
+
+        if not api_key:
+            logger.warning("OpenAI API key is empty or contains only whitespace")
+            return False
+
+        # Validate API key prefix
+        if not api_key.startswith(OPENAI_API_KEY_PREFIX):
+            logger.warning(f"OpenAI API key format is invalid - should start with '{OPENAI_API_KEY_PREFIX}'")
+            return False
+
+        # Validate minimum length (sanity check)
+        if len(api_key) < OPENAI_API_KEY_MIN_LENGTH:
+            logger.warning(
+                f"OpenAI API key appears to be too short - "
+                f"minimum expected length is {OPENAI_API_KEY_MIN_LENGTH} characters"
+            )
+            return False
+
+        # Log the actual length for debugging (without exposing the full key)
+        actual_length = len(api_key)
+
+        # More flexible length validation - allow for format changes
+        if actual_length < OPENAI_API_KEY_MIN_LENGTH:
+            logger.warning(
+                f"OpenAI API key appears to be too short - "
+                f"minimum expected length is {OPENAI_API_KEY_MIN_LENGTH} characters"
+            )
+            return False
+
+        # Log length info for debugging, but don't fail validation for non-typical lengths
+        if actual_length != OPENAI_API_KEY_TYPICAL_LENGTH:
+            logger.info(
+                f"OpenAI API key length is {actual_length} characters "
+                f"(typical length is {OPENAI_API_KEY_TYPICAL_LENGTH}, but this may vary)"
+            )
+        else:
+            logger.info(f"OpenAI API key length matches typical format: {actual_length} characters")
+
+        logger.info("OpenAI API key validation passed")
+        return True
+
+    def update_validation_rules(
+        self, prefix: Optional[str] = None, min_length: Optional[int] = None, typical_length: Optional[int] = None
+    ) -> None:
+        """Update OpenAI API key validation rules at runtime.
+
+        This method allows updating validation rules without restarting the service.
+        Useful for adapting to format changes or testing different validation criteria.
+
+        Args:
+            prefix: New API key prefix to validate against
+            min_length: New minimum length requirement
+            typical_length: New typical length for logging purposes
+        """
+        if prefix is not None:
+            settings.OPENAI_API_KEY_PREFIX = prefix
+            logger.info(f"Updated OpenAI API key prefix to: {prefix}")
+
+        if min_length is not None:
+            settings.OPENAI_API_KEY_MIN_LENGTH = min_length
+            logger.info(f"Updated OpenAI API key minimum length to: {min_length}")
+
+        if typical_length is not None:
+            settings.OPENAI_API_KEY_TYPICAL_LENGTH = typical_length
+            logger.info(f"Updated OpenAI API key typical length to: {typical_length}")
+
+        logger.info("OpenAI API key validation rules updated successfully")
+
+
+# Global AI service instance
+ai_service = AIService()

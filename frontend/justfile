@@ -1,0 +1,253 @@
+# AI Language Learning Frontend - Just Commands
+# Run with: just <command> or just --list to see all commands
+
+# Helper function to run npm commands
+run-npm command:
+    @npm {{command}}
+
+# Default command - show help
+default:
+    @just --list
+
+
+
+# Install dependencies
+install:
+    @echo "Installing dependencies..."
+    @npm install
+
+# Install production dependencies only
+install-prod:
+    @echo "Installing production dependencies..."
+    @npm ci --only=production
+
+# Show Node.js version info
+node-info:
+    @echo "Node.js version information:"
+    @echo "Current version:"
+    @node --version
+    @echo "npm version:"
+    @npm --version
+
+# Start development server
+dev:
+    @echo "Starting development server..."
+    npm run dev
+    @echo "Frontend started in background (PID: $$(cat .pid))"
+
+# Build for production
+build:
+    @echo "Building for production..."
+    @npm run build
+
+# Build and analyze bundle
+build-analyze:
+    @echo "Building and analyzing bundle..."
+    @npm run build
+    @npx webpack-bundle-analyzer build/static/js/*.js
+
+# Run tests
+test:
+    @echo "Running tests..."
+    @npm test -- --watchAll=false
+
+# Run tests in watch mode
+test-watch:
+    @echo "Running tests in watch mode..."
+    @npm test -- --watch
+
+# Run tests with coverage
+test-cov:
+    @echo "Running tests with coverage..."
+    @npm run test:coverage
+
+# Run E2E tests
+test-e2e:
+    @echo "Running E2E tests..."
+    @npm run test:e2e
+
+# Run E2E tests in headed mode
+test-e2e-headed:
+    @echo "Running E2E tests in headed mode..."
+    @npm run test:e2e -- --headed
+
+# Run E2E tests with specific browser
+test-e2e-browser browser:
+    @echo "Running E2E tests with {{browser}}..."
+    @just run-npm "run test:e2e -- --project={{browser}}"
+
+# Lint code
+lint:
+    @echo "Running ESLint..."
+    @npm run lint
+
+# Auto-fix linting issues
+lint-fix:
+    @echo "Auto-fixing linting issues..."
+    @just run-npm "run lint:fix"
+    @echo "Frontend linting issues auto-fixed! ✨"
+
+# Format code
+format:
+    @echo "Formatting code with Prettier..."
+    @just run-npm "run format"
+
+# Check code formatting
+format-check:
+    @echo "Checking code formatting..."
+    @npm run format -- --check
+
+# Type checking
+type-check:
+    @echo "Running TypeScript type checking..."
+    @npm run type-check
+
+# Run all code quality checks
+quality: lint format-check type-check
+    @echo "All code quality checks passed! ✨"
+
+# Start storybook
+storybook:
+    @echo "Starting Storybook..."
+    @just run-npm "run storybook"
+
+# Build storybook
+storybook-build:
+    @echo "Building Storybook..."
+    @just run-npm "run build-storybook"
+
+# Start development server with HTTPS
+dev-https:
+    @echo "Starting development server with HTTPS..."
+    @HTTPS=true npm start
+
+# Start development server on specific port
+dev-port port:
+    @echo "Starting development server on port {{port}}..."
+    @PORT={{port}} npm start
+
+# Bundle analysis
+analyze:
+    @echo "Analyzing bundle..."
+    @npm run build
+    @npx webpack-bundle-analyzer build/static/js/*.js
+
+# Performance audit
+audit:
+    @echo "Running performance audit..."
+    @npm run build
+    @npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html
+
+# Check for security vulnerabilities
+security:
+    @echo "Checking for security vulnerabilities..."
+    @just run-npm "audit"
+    @just run-npm "audit --audit-level=moderate"
+
+# Fix security vulnerabilities
+security-fix:
+    @echo "Fixing security vulnerabilities..."
+    @just run-npm "audit fix"
+
+# Update dependencies
+update:
+    @echo "Updating dependencies..."
+    @just run-npm "update"
+    @just run-npm "audit fix"
+
+# Clean build artifacts
+clean:
+    @echo "Cleaning build artifacts..."
+    rm -rf build/
+    rm -rf node_modules/.cache/
+    rm -rf coverage/
+    rm -rf .nyc_output/
+
+# Clean all (including node_modules)
+clean-all: clean
+    @echo "Removing node_modules..."
+    rm -rf node_modules/
+    rm -f package-lock.json
+
+# Docker commands
+docker-build:
+    @echo "Building Docker image..."
+    docker build -t ai-language-learning-frontend .
+
+docker-run:
+    @echo "Running Docker container..."
+    docker run -p 3000:3000 ai-language-learning-frontend
+
+# Development workflow
+workflow: quality test-cov
+    @echo "Development workflow completed! 🎉"
+
+# Pre-commit checks
+pre-commit: quality test
+    @echo "Pre-commit checks passed! ✨"
+
+# CI pipeline simulation
+ci: quality test-cov test-e2e security
+    @echo "CI pipeline completed! 🚀"
+
+# Start all development tools
+dev-tools: dev storybook
+    @echo "All development tools started!"
+
+# Health check
+health:
+    @echo "Checking application health..."
+    curl -f http://localhost:3000 || echo "Application not running"
+
+# Show bundle size
+bundle-size:
+    @echo "Analyzing bundle size..."
+    @npm run build
+    @npx webpack-bundle-analyzer build/static/js/*.js --mode=static
+
+# Run specific test file
+test-file file:
+    @echo "Running tests in {{file}}..."
+    @just run-npm "test -- {{file}}"
+
+# Run specific test with pattern
+test-pattern pattern:
+    @echo "Running tests matching pattern: {{pattern}}..."
+    @just run-npm "test -- --testNamePattern={{pattern}}"
+
+# Run tests with specific environment
+test-env env:
+    @echo "Running tests with environment: {{env}}..."
+    @NODE_ENV={{env}} npm test
+
+# Development server with specific host
+dev-host host:
+    @echo "Starting development server on host {{host}}..."
+    @HOST={{host}} npm start
+
+# Help
+help:
+    @echo "AI Language Learning Frontend - Available Commands:"
+    @echo ""
+    @echo "Node.js Management:"
+    @echo "  just node-info       - Show Node.js version information"
+    @echo ""
+    @echo "Development:"
+    @echo "  just dev             - Start development server"
+    @echo "  just build           - Build for production"
+    @echo "  just install         - Install dependencies"
+    @echo ""
+    @echo "Testing:"
+    @echo "  just test            - Run tests"
+    @echo "  just test-cov        - Run tests with coverage"
+    @echo "  just test-e2e        - Run E2E tests"
+    @echo ""
+    @echo "Code Quality:"
+    @echo "  just lint            - Run ESLint"
+    @echo "  just format          - Format code"
+    @echo "  just quality         - Run all quality checks"
+    @echo ""
+    @echo "Utilities:"
+    @echo "  just clean           - Clean build artifacts"
+    @echo "  just analyze         - Analyze bundle"
+    @echo "  just help            - Show this help"
