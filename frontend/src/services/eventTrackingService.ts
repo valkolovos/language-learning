@@ -1,3 +1,5 @@
+import log from "./logger";
+
 export interface TrackedEvent {
   type: "lesson_started" | "audio_play" | "text_revealed" | "phrase_replay";
   timestamp: number;
@@ -99,13 +101,10 @@ export class EventTrackingService {
    * Log events to console (useful for development)
    */
   logEvents(): void {
-    if (process.env.NODE_ENV === "development") {
-      console.group("Event Tracking - All Events");
-      this.events.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.type}`, event);
-      });
-      console.groupEnd();
-    }
+    log.debug("Event Tracking - All Events");
+    this.events.forEach((event, index) => {
+      log.debug(`${index + 1}. ${event.type}`, event);
+    });
   }
 
   /**
@@ -119,9 +118,7 @@ export class EventTrackingService {
       this.events = this.events.slice(-this.maxEvents);
     }
 
-    // Log to console in development only
-    if (process.env.NODE_ENV === "development") {
-      console.log("Event tracked:", event);
-    }
+    // Log event
+    log.debug("Event tracked:", event);
   }
 }

@@ -227,14 +227,23 @@ export class LessonService {
    */
   private static validateAudioFiles(lesson: any): boolean {
     try {
-      // Check main line audio
-      if (!lesson.mainLine.audio.filename || !lesson.mainLine.audio.id) {
+      // Check main line audio - must have id and either filename (pre-recorded) or text+language (TTS)
+      const mainAudio = lesson.mainLine.audio;
+      if (
+        !mainAudio.id ||
+        (!mainAudio.filename && (!mainAudio.text || !mainAudio.language))
+      ) {
         return false;
       }
 
-      // Check phrase audio files
+      // Check phrase audio files - must have id and either filename (pre-recorded) or text+language (TTS)
       for (const phrase of lesson.phrases) {
-        if (!phrase.audio.filename || !phrase.audio.id) {
+        const phraseAudio = phrase.audio;
+        if (
+          !phraseAudio.id ||
+          (!phraseAudio.filename &&
+            (!phraseAudio.text || !phraseAudio.language))
+        ) {
           return false;
         }
       }

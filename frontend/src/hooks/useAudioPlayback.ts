@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { AudioPlaybackService } from "../services/audioPlaybackService";
 import { AudioClip, AudioPlaybackState } from "../types/lesson";
+import log from "../services/logger";
 
 export const useAudioPlayback = () => {
   const [playbackState, setPlaybackState] = useState<AudioPlaybackState>({
@@ -29,9 +30,7 @@ export const useAudioPlayback = () => {
         }
       };
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Failed to initialize audio service:", error);
-      }
+      log.error("Failed to initialize audio service:", error);
     }
   }, []);
 
@@ -43,9 +42,7 @@ export const useAudioPlayback = () => {
     try {
       await audioService.current.playAudio(audioClip);
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Failed to play audio:", error);
-      }
+      log.error("Failed to play audio:", error);
       throw error;
     }
   }, []);

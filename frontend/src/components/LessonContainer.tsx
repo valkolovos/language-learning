@@ -4,6 +4,7 @@ import { LessonService } from "../services/lessonService";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { AudioPlayer } from "./AudioPlayer";
 import { EventTrackingService } from "../services/eventTrackingService";
+import log from "../services/logger";
 
 interface LessonContainerProps {
   lessonId: string;
@@ -46,9 +47,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
         }
       } catch (err) {
         setError("Unexpected error occurred while loading lesson");
-        if (process.env.NODE_ENV === "development") {
-          console.error("Lesson loading error:", err);
-        }
+        log.error("Lesson loading error:", err);
       } finally {
         setLoading(false);
       }

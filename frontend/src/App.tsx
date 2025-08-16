@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "./App.css";
 import { LessonContainer } from "./components/LessonContainer";
 import { LessonService } from "./services/lessonService";
+import log from "./services/logger";
 
 function App() {
   const [selectedLessonId, setSelectedLessonId] =
@@ -14,9 +15,7 @@ function App() {
         const lessons = await LessonService.getAvailableLessons();
         setAvailableLessons(lessons);
       } catch (error) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Failed to load available lessons:", error);
-        }
+        log.error("Failed to load available lessons:", error);
       }
     };
 

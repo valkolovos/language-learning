@@ -1,6 +1,6 @@
 export interface AudioClip {
   id: string;
-  filename?: string; // Optional for TTS
+  filename?: string; // Path to pre-recorded audio file. Omit for TTS-based audio.
   text: string; // Text to speak for TTS
   duration: number;
   volume: number;
