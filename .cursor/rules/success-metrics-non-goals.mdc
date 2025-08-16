@@ -1,0 +1,19 @@
+---
+description: MVP success criteria and explicit non-goals
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Success Metrics & Non-Goals
+
+## Success Metrics (MVP)
+- **Can-Do Proxy (Reveal Rate)**: ≥70% reveal text within 2 complete plays
+- **Phrase Replay Rate**: ≥60% tap at least one phrase after reveal
+- **Day-2 Return**: ≥25% start 60-sec review within 24-48 hours
+- **A11y**: No critical keyboard traps, Lighthouse ≥90
+
+## Non-Goals for MVP
+- No speech recording/scoring, no HVPT quiz, no shadowing
+- No accounts, payments, social features, or teacher tools
+- No large curriculum - one micro-lesson sufficient to validate loop
+- No cloud dependencies or server round-trips

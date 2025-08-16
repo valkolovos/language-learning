@@ -1,0 +1,21 @@
+---
+description: Core user experience flow and state management
+globs: ["**/components/**", "**/types/**"]
+alwaysApply: false
+---
+
+# User Experience Flow
+
+## Core Flow
+1. **Lesson opens** → `lesson_started` event recorded
+2. **Pre-reveal**: only listening controls and hint visible
+3. **Two complete plays** → reveal control becomes available
+4. **Post-reveal**: full text, phrases, replay all, transcript toggle
+5. **Phrase replays** with playing state feedback
+
+## State Management
+- Pre-reveal: hide all text until gate unlocks
+- Post-reveal: show full lesson content and phrase controls
+- Transcript toggle: available only after reveal
+- Progress indicator: reaches 100% once text is revealed
+- XP counters: local, non-persistent, never block usage

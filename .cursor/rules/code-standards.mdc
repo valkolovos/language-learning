@@ -1,0 +1,37 @@
+---
+description: Code quality and architectural standards
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Code Standards
+
+## Architecture
+- Clean, predictable data models
+- Proper error handling and graceful degradation
+- Type safety with TypeScript
+- **Web-based UI** that supports all screen sizes
+- Responsive design for different screen sizes
+
+## Technology Stack
+- **Backend**: Python with FastAPI, SQLAlchemy, and proper type hints
+- **Frontend**: TypeScript/React 18 with strict mode and modern patterns
+- **Development**: Use `just` commands for all development tasks (build, test, lint, etc.)
+
+## React Patterns
+- Modern React patterns (hooks, functional components)
+- Proper state management for UI states
+- Component composition over inheritance
+- Accessibility-first component design
+
+## Error Handling
+- Structured error representation for malformed content
+- Graceful error handling without crashing the app
+- User-friendly error messages with retry options
+- App remains usable even when content fails to load
+
+## Code Quality
+- All code must be covered with tests
+- Requirements must be covered with Gherkin BDD tests
+- Code must adhere to formatting and linting rules in the repository
+- Run `just quality` before commits (pre-commit hooks configured)
