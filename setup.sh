@@ -266,7 +266,29 @@ check_just() {
                 if command -v brew &> /dev/null; then
                     brew install just
                 else
-                    curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to ~/.local/bin
+                    # Download and verify just installer
+                    JUST_INSTALLER_URL="https://just.systems/install.sh"
+                    JUST_INSTALLER_SHA256="$(curl -s https://just.systems/install.sh.sha256 | cut -d' ' -f1)"
+                    
+                    if [ -z "$JUST_INSTALLER_SHA256" ]; then
+                        print_error "Failed to get just installer checksum. Installation aborted for security."
+                        exit 1
+                    fi
+                    
+                    # Download installer to temporary file for verification
+                    TEMP_INSTALLER=$(mktemp)
+                    curl --proto '=https' --tlsv1.2 -sSf "$JUST_INSTALLER_URL" -o "$TEMP_INSTALLER"
+                    
+                    # Verify checksum
+                    if ! echo "$JUST_INSTALLER_SHA256  $TEMP_INSTALLER" | shasum -a 256 -c --quiet; then
+                        print_error "Checksum verification failed for just installer. Installation aborted for security."
+                        rm -f "$TEMP_INSTALLER"
+                        exit 1
+                    fi
+                    
+                    # Execute verified installer
+                    bash "$TEMP_INSTALLER" --to ~/.local/bin
+                    rm -f "$TEMP_INSTALLER"
                     export PATH="$HOME/.local/bin:$PATH"
                 fi
             else

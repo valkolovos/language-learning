@@ -106,14 +106,24 @@ class AIService:
 
     def _initialize_openai_client(self) -> None:
         """Initialize OpenAI client with validation."""
-        if self._validate_openai_api_key(settings.OPENAI_API_KEY):
-            try:
-                self.openai_client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-                logger.info("OpenAI client initialized successfully")
-            except Exception as e:
-                logger.error("Failed to initialize OpenAI client", error=str(e))
-        else:
-            logger.warning("OpenAI API key is missing or invalid - OpenAI features will be disabled")
+        try:
+            # Safely get the OpenAI API key from settings
+            openai_api_key = getattr(settings, "OPENAI_API_KEY", None)
+
+            if self._validate_openai_api_key(openai_api_key):
+                try:
+                    self.openai_client = openai.AsyncOpenAI(api_key=openai_api_key)
+                    logger.info("OpenAI client initialized successfully")
+                except Exception as e:
+                    logger.error("Failed to initialize OpenAI client", error=str(e))
+            else:
+                logger.warning("OpenAI API key is missing or invalid - OpenAI features will be disabled")
+        except AttributeError as e:
+            logger.error("Failed to access OpenAI API key from settings", error=str(e))
+            logger.warning("OpenAI features will be disabled due to configuration error")
+        except Exception as e:
+            logger.error("Unexpected error during OpenAI client initialization", error=str(e))
+            logger.warning("OpenAI features will be disabled due to initialization error")
 
     async def translate_text(self, text: str, source_language: str, target_language: str) -> Dict[str, Any]:
         """Translate text using Google Cloud Translate."""

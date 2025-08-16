@@ -91,7 +91,7 @@ def user_exists_with_username(username: str, existing_user: User) -> None:
 
 @when(parsers.parse("I register with the following information:\n{table}"))
 async def register_with_information(
-    table: List[Dict[str, str]], test_session: AsyncSession, test_state: Dict[str, Any]
+    table: List[Dict[str, Any]], test_session: AsyncSession, test_state: Dict[str, Any]
 ) -> None:
     """Register with the provided information."""
     # Extract data from the table
@@ -189,7 +189,7 @@ async def register_with_missing_fields(test_session: AsyncSession, test_state: D
 
 @when(parsers.parse("I register with only required fields:\n{table}"))
 async def register_with_only_required_fields(
-    table: List[Dict[str, str]], test_session: AsyncSession, test_state: Dict[str, Any]
+    table: List[Dict[str, Any]], test_session: AsyncSession, test_state: Dict[str, Any]
 ) -> None:
     """Register with only required fields."""
     if not table:
@@ -280,7 +280,7 @@ def no_new_user_account_created(test_state: Dict[str, Any]) -> None:
 
 
 @then(parsers.parse("the user should have the following attributes:\n{table}"))
-def user_has_attributes(table: List[Dict[str, str]], test_state: Dict[str, Any]) -> None:
+def user_has_attributes(table: List[Dict[str, Any]], test_state: Dict[str, Any]) -> None:
     """Verify user has the expected attributes."""
     registered_user = _safe_get_test_data(test_state, "registered_user")
     assert registered_user["success"], "User registration must be successful to check attributes"
@@ -342,7 +342,7 @@ def error_message_indicates(message: str, test_state: Dict[str, Any]) -> None:
 
 
 @then(parsers.parse("the user should have default values:\n{table}"))
-def user_has_default_values(table: List[Dict[str, str]], test_state: Dict[str, Any]) -> None:
+def user_has_default_values(table: List[Dict[str, Any]], test_state: Dict[str, Any]) -> None:
     """Verify user has expected default values."""
     registered_user = _safe_get_test_data(test_state, "registered_user")
     assert registered_user["success"], "User registration must be successful to check default values"

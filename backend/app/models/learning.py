@@ -105,11 +105,18 @@ class Lesson(Base):
         """Check if lesson is accessible for user's proficiency level."""
         proficiency_order = [DifficultyLevel.BEGINNER, DifficultyLevel.INTERMEDIATE, DifficultyLevel.ADVANCED]
         try:
-            user_level = proficiency_order.index(DifficultyLevel(user_proficiency))
+            # Convert user_proficiency to uppercase to match enum values
+            user_proficiency_upper = user_proficiency.upper()
+            user_level = proficiency_order.index(DifficultyLevel(user_proficiency_upper))
             lesson_level = proficiency_order.index(self.difficulty_level)
             return user_level >= lesson_level
         except ValueError:
             # Handle case where user_proficiency is not a valid enum value
+            logger.warning(
+                "Invalid user proficiency level",
+                user_proficiency=user_proficiency,
+                valid_levels=[level.value for level in DifficultyLevel],
+            )
             return False
 
 

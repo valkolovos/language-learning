@@ -332,7 +332,7 @@ lint-fix-frontend:
 
 # Format code
 format: format-backend format-frontend
-    @echo "All code formatting completed! ��"
+    @echo "All code formatting completed! ✨"
 
 # Format backend code
 format-backend:
