@@ -11,7 +11,7 @@ This directory contains GitHub Actions workflows for automated testing and quali
 **Purpose:** Runs the equivalent of `just test` and `just quality` commands in a CI environment.
 
 **What it does:**
-- Sets up Python 3.11 and Node.js 18.20.0
+- Sets up Python 3.11 and Node.js 20.0.0
 - Installs `uv` for Python dependency management
 - Installs `just` command runner
 - Sets up PostgreSQL and Redis services
@@ -40,7 +40,7 @@ The workflows use these environment variables:
 
 ```bash
 PYTHON_VERSION=3.11
-NODE_VERSION=18.20.0
+NODE_VERSION=20.0.0
 POSTGRES_DB=test_language_learning
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=password
@@ -59,7 +59,7 @@ Both workflows include:
 The workflows automatically install:
 - **Backend**: Uses `uv` to install Python dependencies from `pyproject.toml`
 - **Frontend**: Uses `npm ci` to install Node.js dependencies from `package-lock.json`
-- **Tools**: `just`, `uv`, Python 3.11, Node.js 18.20.0
+- **Tools**: `just`, `uv`, Python 3.11, Node.js 20.0.0
 
 ## Running Locally
 

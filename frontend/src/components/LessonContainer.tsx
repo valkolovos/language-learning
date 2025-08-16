@@ -92,10 +92,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
         <div className="error-message">
           <h3>Error Loading Lesson</h3>
           <p>{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="retry-button"
-          >
+          <button onClick={loadLesson} className="retry-button">
             Try Again
           </button>
         </div>

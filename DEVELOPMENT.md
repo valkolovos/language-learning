@@ -17,7 +17,7 @@ Before you can develop or run the AI Language Learning application, you need to 
 
 ### 🟢 Node.js Environment
 - **nvm**: Node Version Manager for Node.js version control
-- **Node.js**: Version 18.20.0 (specified in `.nvmrc`)
+- **Node.js**: Version 20.0.0 (specified in `.nvmrc`)
 - **npm**: Comes with Node.js
 
 ### 🛠️ Development Tools
@@ -86,7 +86,7 @@ nvm install 18.20.0
 nvm use 18.20.0
 
 # Verify installation
-node --version  # Should show v18.20.0
+node --version  # Should show v20.0.0
 npm --version
 ```
 

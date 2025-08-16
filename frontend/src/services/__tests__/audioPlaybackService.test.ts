@@ -94,7 +94,7 @@ describe("AudioPlaybackService", () => {
       };
 
       await expect(service.playAudio(audioClip)).rejects.toThrow(
-        "Cannot play pre-recorded audio clip 'test-audio' with TTS service. Use audio playback service instead.",
+        "Cannot play pre-recorded audio clip 'test-audio' with TTS service. Pre-recorded audio files are not yet supported in this implementation.",
       );
     });
 

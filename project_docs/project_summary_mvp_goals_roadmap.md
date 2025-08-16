@@ -3,7 +3,9 @@
 ## Executive Summary
 We are building a web-based language learning product optimized for **fast conversational ability**. The guiding principle is **audio‑first, phrase‑first, intelligibility‑focused** practice delivered in **tiny loops** (30–60 seconds). The MVP will prove that a new learner can achieve a **“can‑do” moment in ≤5 minutes** with a single micro‑lesson and return for at least one short review the next day.
 
-**Current status:** Deliverable 1 (Listen‑First Micro‑Lesson — Meet & Greet) has an implementation‑agnostic functional spec defined in this workspace. The product focus is on **small, incremental, valuable steps**, with a **local‑first** operating mode.
+**Current status:** Deliverable 1 (Listen‑First Micro‑Lesson — Meet & Greet) has an implementation‑agnostic functional spec defined in this workspace. The product focus is on **small, incremental, valuable steps**, with a **local-first** operating mode that supports local development and testing.
+
+**Note on Local-First**: This means the system can be fully developed, tested, and run locally using mocks for third-party services. While it may utilize cloud services when available, it gracefully degrades to local processing when they're unavailable. This enables developers to work offline and test without external dependencies.
 
 ---
 
@@ -27,7 +29,7 @@ Help adults become conversational faster by prioritizing **ready‑to‑use phra
 3) Sees lightweight progress and XP, and
 4) Encounters basic analytics and accessibility.
 
-**Local‑first** operation is required; no sign‑in or cloud dependencies are necessary for the MVP.
+**Local-first** operation is required - the system must support local development and testing with mocks, with graceful degradation when third-party services are unavailable.
 
 ---
 
@@ -67,7 +69,7 @@ Help adults become conversational faster by prioritizing **ready‑to‑use phra
 ---
 
 ## Success Criteria (MVP completion)
-- A new learner can complete the Listen‑First micro‑lesson end‑to‑end **locally**.
+- A new learner can complete the Listen‑First micro‑lesson end‑to‑end **locally**, and developers can test the system locally with mocks.
 - NSM (Reveal Rate) meets or exceeds **70%** with the baseline copy and flow.
 - Phrase Replay Rate ≥ **60%**.
 - Accessibility checks pass (keyboard operability, contrast, focus states).
@@ -121,7 +123,7 @@ Analyze funnel: start → first play → second play → reveal → phrase repla
 ---
 
 ## Decision Log (initial)
-- **Local‑first** is mandatory for MVP; no sign‑in, no cloud dependency.
+- **Local-first** is mandatory for MVP - the system must support local development and testing with mocks, with graceful degradation when third-party services are unavailable.
 - **Listen‑first** is the first deliverable; speech/scoring come later.
 - Success is defined by **Reveal Rate**, **Phrase Replay**, and **a11y quality** rather than raw time‑in‑app.
 

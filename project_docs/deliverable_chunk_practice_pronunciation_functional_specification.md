@@ -3,17 +3,17 @@
 **Type:** Functional Specification (implementation‑agnostic)
 
 ## Purpose
-Add a focused **pronunciation practice loop** that fits after the Listen‑First reveal in a micro‑lesson. The learner records a short **chunk** (1–4 words, ~1–3 seconds), receives **simple, actionable feedback** (Clear / Almost / Try again + 1 micro‑tip), and can replay/retake quickly. The slice must ship **local‑first** with an optional cloud scoring flag that can be toggled per environment.
+Add a focused **pronunciation practice loop** that fits after the Listen‑First reveal in a micro‑lesson. The learner records a short **chunk** (1–4 words, ~1–3 seconds), receives **simple, actionable feedback** (Clear / Almost / Try again + 1 micro‑tip), and can replay/retake quickly. The slice must ship **local-first** (supporting local development and testing with mocks) with an optional cloud scoring flag that can be toggled per environment.
 
 ## Definition of Done (DoD)
-A new learner can complete at least one pronunciation attempt for a target chunk and see feedback without confusion or setup beyond granting microphone access. All core flows are keyboard/screen‑reader accessible. No sign‑in or cloud dependency is required for the base flow.
+A new learner can complete at least one pronunciation attempt for a target chunk and see feedback without confusion or setup beyond granting microphone access. All core flows are keyboard/screen‑reader accessible. The system can be developed and tested locally with mocks, and gracefully degrades when third-party services are unavailable.
 
 ---
 
 ## In Scope
 - **Single‑chunk practice** within an existing lesson (post‑reveal)
 - **Mic capture** and **attempt lifecycle** (idle → recording → processing → feedback)
-- **Local‑first scoring** using intelligibility proxies (see *Scoring Model*)
+- **Local-first scoring** using intelligibility proxies (see *Scoring Model*) - supports local development with mocks
 - **Optional managed scoring** behind a feature flag (environment toggle)
 - **Feedback UI:** state (Clear / Almost / Try again), one micro‑tip, and per‑word highlighting when available
 - **Controls:** Record, Stop, Play back attempt, Retake, Next
@@ -43,7 +43,7 @@ A new learner can complete at least one pronunciation attempt for a target chunk
 5. **Playback**: The user can play their last attempt and the model reference audio.
 6. **Retry**: Retake replaces the last attempt and recomputes feedback.
 7. **A11y**: Status changes announce via ARIA live region; all controls tabbable with visible focus.
-8. **Local‑first**: With feature flag **off**, all feedback derives from on‑device processing; no network calls are required to complete the loop.
+8. **Local-first**: With feature flag **off**, all feedback derives from on‑device processing; no network calls are required to complete the loop. The system can be fully developed and tested locally using mocks.
 9. **Telemetry (local or deferred)**: The app records attempt result (Clear/Almost/TryAgain), duration, and whether user proceeded.
 
 ---
@@ -51,7 +51,7 @@ A new learner can complete at least one pronunciation attempt for a target chunk
 ## Scoring Model (implementation‑agnostic)
 The system computes **intelligibility** using a reference chunk and the user’s audio. Two interchangeable backends:
 
-- **Local‑first backend** (default): on‑device speech recognition in the browser (WASM) to obtain a best‑effort transcript and word timings; simple acoustic cues (duration, energy) for stressed syllables; VAD to trim silences.
+- **Local-first backend** (default): on‑device speech recognition in the browser (WASM) to obtain a best‑effort transcript and word timings; simple acoustic cues (duration, energy) for stressed syllables; VAD to trim silences. Can be mocked for local development and testing.
 - **Managed backend** (feature‑flagged): cloud scoring API returning word/phoneme accuracy, fluency/timing, and completeness. The UI and thresholds remain the same regardless of backend.
 
 **Derived metrics (conceptual definitions):**
@@ -105,8 +105,9 @@ Capture the following **event fields** for analytics (local buffer; upload optio
 ---
 
 ## Non‑Functional & Privacy
-- **Local‑first** operation is mandatory. Managed scoring is optional.
-- **Privacy statement** (visible near Record): “Audio stays on your device for this practice. Nothing is saved or sent unless you opt in.”
+- **Local-first** operation is mandatory - the system must support local development and testing with mocks. Managed scoring is optional.
+- **Local-first definition**: The system can be fully developed, tested, and run locally using mocks for third-party services. While it may utilize cloud services when available, it gracefully degrades to local processing when they're unavailable. This enables developers to work offline and test without external dependencies.
+- **Privacy statement** (visible near Record): "Audio stays on your device for this practice. Nothing is saved or sent unless you opt in."
 - No PII collected; attempts are ephemeral.
 
 ---
@@ -151,10 +152,11 @@ Given I have attempted the chunk and received Try again
 When I tap Next
 Then I am prevented from leaving until I achieve Clear or Almost
 
-**Scenario: Local‑first fallback**
+**Scenario: Local-first fallback**
 Given managed scoring is unavailable or disabled
 When I complete an attempt
 Then I receive a state and micro‑tip computed locally without network access
+And the system gracefully degrades to local processing
 
 ---
 
@@ -187,16 +189,16 @@ Then I receive a state and micro‑tip computed locally without network access
 
 ### Decision factors (for this product)
 - **Primary languages:** Greek first, others later → favors **multilingual ASR**, de‑prioritizes managed scorers if they lack Greek.
-- **Local‑first requirement:** MVP must work offline → favors **Vosk/Whisper in-browser**.
+- **Local-first requirement:** MVP must support local development and testing with mocks → favors **Vosk/Whisper in-browser** with graceful fallback to local processing.
 - **Feedback shape:** Our UX needs only **Clear / Almost / Try again + one micro‑tip** → phoneme‑level isn’t mandatory in v1.
 - **Privacy:** Avoid sending audio by default → local first; cloud is opt‑in behind a flag.
 
 ---
 
 ### Recommendation (phased)
-**Phase 1 — MVP (2–3 weeks scope): Local‑first intelligibility**
+**Phase 1 — MVP (2–3 weeks scope): Local-first intelligibility**
 - **Backend:** `vosk-browser` (Greek model) with simple VAD; compute **Coverage** + **Timing** heuristics and gate to three states using the thresholds already defined.
-- **Why:** Meets offline requirement, minimal cost, sufficient for chunk‑level practice, fastest to integrate.
+- **Why:** Supports local development with mocks, minimal cost, sufficient for chunk‑level practice, fastest to integrate.
 - **Risk & Mitigation:** If accuracy is borderline for some chunks, (a) shorten chunks, (b) relax Coverage tolerance for function words, (c) add “Play reference → then Record” guardrails.
 
 **Phase 2 — Accuracy bump (feature‑flag): Cloud ASR for Greek**

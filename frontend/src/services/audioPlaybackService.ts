@@ -65,7 +65,7 @@ export class AudioPlaybackService {
       // Validate that this is a TTS audio clip
       if (!isTTSAudioClip(audioClip)) {
         throw new Error(
-          `Cannot play pre-recorded audio clip '${audioClip.id}' with TTS service. Use audio playback service instead.`,
+          `Cannot play pre-recorded audio clip '${audioClip.id}' with TTS service. Pre-recorded audio files are not yet supported in this implementation.`,
         );
       }
 
