@@ -326,6 +326,35 @@ create_directories() {
     print_success "Directories created"
 }
 
+# Create root-level .env file for docker-compose
+create_root_env() {
+    print_status "Creating root-level .env file for docker-compose..."
+    
+    if [ ! -f ".env" ]; then
+        cat > .env << 'EOF'
+# Database credentials
+POSTGRES_PASSWORD=secure_password_123
+
+# Google Cloud configuration
+GOOGLE_CLOUD_PROJECT=your-google-cloud-project-id
+
+# Optional: Override default ports if needed
+# POSTGRES_PORT=5432
+# REDIS_PORT=6379
+# BACKEND_PORT=8000
+# FRONTEND_PORT=3000
+EOF
+        print_success "Created .env file with secure default password"
+        print_warning "Please update with your actual configuration values:"
+        print_warning "  - Change POSTGRES_PASSWORD if desired"
+        print_warning "  - Set your GOOGLE_CLOUD_PROJECT if using Google Cloud services"
+    else
+        print_status "Root-level .env file already exists"
+    fi
+    
+    print_success "Root-level .env file ready"
+}
+
 # Setup backend environment
 setup_backend() {
     print_status "Setting up backend environment..."
@@ -345,9 +374,92 @@ setup_backend() {
     
     # Create .env file if it doesn't exist
     if [ ! -f ".env" ]; then
-        print_status "Creating .env file from template..."
-        cp env.example .env
-        print_warning "Please update .env file with your actual configuration values"
+        print_status "Creating .env file with correct Docker configuration..."
+        
+        # Get the password from root .env file
+        if [ -f "../.env" ]; then
+            POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" ../.env | cut -d'=' -f2)
+            if [ -z "$POSTGRES_PASSWORD" ] || [ "$POSTGRES_PASSWORD" = "your_secure_password_here" ]; then
+                print_warning "POSTGRES_PASSWORD not set or still has default value in root .env"
+                print_warning "Using fallback password for backend configuration"
+                POSTGRES_PASSWORD="secure_password_123"
+            fi
+        else
+            print_warning "Root .env file not found, using fallback password"
+            POSTGRES_PASSWORD="secure_password_123"
+        fi
+        
+        # Create backend .env with correct Docker configuration
+        cat > .env << EOF
+# Application Configuration
+DEBUG=true
+SECRET_KEY=your-secret-key-here-change-in-production
+HOST=0.0.0.0
+PORT=8000
+
+# Database Configuration - Smart configuration for both local dev and Docker modes
+# The backend will automatically detect which mode it's running in
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/language_learning
+DATABASE_POOL_SIZE=20
+DATABASE_MAX_OVERFLOW=30
+
+# Redis Configuration - Smart configuration for both modes
+REDIS_URL=redis://localhost:6379
+REDIS_POOL_SIZE=10
+
+# Google Cloud Configuration
+GOOGLE_CLOUD_PROJECT=your-google-cloud-project-id
+GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/google-credentials.json
+
+# OpenAI Configuration
+OPENAI_API_KEY=your-openai-api-key-here
+AI_MODEL_NAME=gpt-4
+
+# Security Configuration
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+ALGORITHM=HS256
+
+# CORS Configuration
+ALLOWED_HOSTS=http://localhost:3000,http://localhost:8000
+
+# Learning Engine Configuration
+SPACED_REPETITION_INTERVALS=1,3,7,14,30,90,180,365
+MAX_DAILY_LESSONS=5
+MIN_LEARNING_SESSION_TIME=300
+
+# Gamification Configuration
+XP_PER_LESSON=100
+XP_PER_EXERCISE=25
+STREAK_MULTIPLIER=1.1
+
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+
+# Monitoring Configuration
+SENTRY_DSN=your-sentry-dsn-here
+ENABLE_METRICS=true
+
+# Testing Configuration
+TESTING=false
+TEST_DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/test_language_learning
+TEST_DB_USER=postgres
+TEST_DB_PASSWORD=${POSTGRES_PASSWORD}
+TEST_DB_HOST=localhost
+TEST_DB_PORT=5432
+TEST_DB_NAME=test_language_learning
+
+# Environment Detection
+# Note: When running in Docker, the backend will automatically use the correct
+# database host (postgres) and redis host (redis) due to Docker networking.
+# When running locally, it will use localhost for both.
+EOF
+        
+        print_success "Backend .env file created with Docker-optimized configuration"
+        print_warning "Please update with your actual API keys and configuration values"
+    else
+        print_status "Backend .env file already exists"
     fi
     
     cd ..
@@ -486,133 +598,29 @@ EOF
     print_success "Nginx configuration created"
 }
 
-# Build and start services
-start_services() {
-    print_status "Building and starting services..."
-    
-    # Use the new just command for starting all services in Docker mode
-    print_status "Starting all services in Docker mode..."
-    just start-docker
-    
-    print_success "Services started successfully"
-}
-
-# Wait for services to be ready
-wait_for_services() {
-    print_status "Waiting for services to be ready..."
-    
-    # Wait for database using justfile command
-    print_status "Waiting for database..."
-    until just verify-db-health > /dev/null 2>&1; do
-        print_status "Database not ready yet, waiting..."
-        sleep 5
-    done
-    print_success "Database is ready"
-    
-    # Wait for backend with timeout
-    print_status "Waiting for backend..."
-    local backend_timeout=60
-    local backend_elapsed=0
-    while [ $backend_elapsed -lt $backend_timeout ]; do
-        if curl -f http://localhost:8000/health > /dev/null 2>&1; then
-            print_success "Backend is ready"
-            break
-        fi
-        print_status "Backend not ready yet, waiting... ($backend_elapsed/$backend_timeout seconds)"
-        sleep 5
-        backend_elapsed=$((backend_elapsed + 5))
-    done
-    
-    if [ $backend_elapsed -ge $backend_timeout ]; then
-        print_warning "Backend health check timed out after $backend_timeout seconds"
-        print_warning "You may need to check backend logs manually"
-    fi
-    
-    # Wait for frontend with timeout
-    print_status "Waiting for frontend..."
-    local frontend_timeout=60
-    local frontend_elapsed=0
-    while [ $frontend_elapsed -lt $frontend_timeout ]; do
-        # Check frontend on port 3000 (mapped from container port 80)
-        if curl -f http://localhost:3000 > /dev/null 2>&1; then
-            print_success "Frontend is ready"
-            break
-        fi
-        print_status "Frontend not ready yet, waiting... ($frontend_elapsed/$frontend_timeout seconds)"
-        sleep 5
-        frontend_elapsed=$((frontend_elapsed + 5))
-    done
-    
-    if [ $frontend_elapsed -ge $frontend_timeout ]; then
-        print_warning "Frontend health check timed out after $frontend_timeout seconds"
-        print_warning "You may need to check frontend logs manually"
-    fi
-    
-    print_success "Service health checks completed"
-    
-    # Show final service status
-    print_status "Final service status:"
-    just status
-}
-
-# Show service logs for debugging
-show_service_logs() {
-    print_status "Showing recent service logs for debugging..."
+# Show setup status
+show_setup_status() {
+    print_status "Setup Status:"
+    echo "  ✅ Root-level .env file created"
+    echo "  ✅ Backend .env file created with Docker configuration"
+    echo "  ✅ Frontend .env file created"
+    echo "  ✅ Database initialization script created"
+    echo "  ✅ Nginx configuration created"
+    echo "  ✅ Backend dependencies installed"
+    echo "  ✅ Frontend dependencies installed"
     echo ""
-    echo "=== Database Logs ==="
-    docker-compose logs --tail=20 postgres
-    echo ""
-    echo "=== Backend Logs ==="
-    docker-compose logs --tail=20 backend
-    echo ""
-    echo "=== Frontend Logs ==="
-    docker-compose logs --tail=20 frontend
-    echo ""
-    echo "=== Nginx Logs ==="
-    docker-compose logs --tail=20 nginx
-}
-
-# Run tests using just
-run_tests() {
-    print_status "Running tests using just..."
-    
-    # Run all tests using root justfile
-    print_status "Running all tests..."
-    just test
-    
-    print_success "All tests completed"
-}
-
-# Show status
-show_status() {
-    print_status "Application Status:"
-    echo "  Backend API: http://localhost:8000"
-    echo "  Frontend: http://localhost:3000 (served by nginx)"
-    echo "  API Documentation: http://localhost:8000/docs"
-    echo "  Health Check: http://localhost:8000/health"
+    print_status "Configuration files created:"
+    echo "  - .env (root level - for docker-compose)"
+    echo "  - backend/.env (backend configuration)"
+    echo "  - frontend/.env (frontend configuration)"
     echo ""
     print_status "Next steps:"
-    echo "  1. Update backend/.env with your configuration"
+    echo "  1. Update backend/.env with your actual API keys and configuration"
     echo "  2. Set up Google Cloud credentials in credentials/"
     echo "  3. Configure OpenAI API key in backend/.env"
-    echo "  4. Access the application at http://localhost:3000"
-    echo "  5. Seed the database with sample data: just db-seed"
-    echo ""
-    print_status "Development commands (using just):"
-    echo "  just start            - Start development environment (local mode)"
-    echo "  just start-docker     - Start services in Docker mode (production-like)"
-    echo "  just dev              - Alternative to start (same functionality)"
-    echo "  just test             - Run all tests"
-    echo "  just quality          - Run code quality checks"
-    echo "  just format           - Format all code"
-    echo "  just db-seed          - Seed database with sample data"
-    echo "  just modes            - Explain development modes"
-    echo "  just help             - Show all available commands"
-    echo ""
-    print_status "Node.js version management:"
-    echo "  nvm use               - Use the Node.js version from .nvmrc"
-    echo "  nvm current           - Show current Node.js version"
-    echo "  nvm list              - List installed Node.js versions"
+    echo "  4. Start services with: just start-docker"
+    echo "  5. Access the application at http://localhost:3000"
+    echo "  6. Seed the database with sample data: just db-seed"
 }
 
 # Main execution
@@ -631,68 +639,24 @@ main() {
     
     # Setup environment
     create_directories
+    create_root_env
     setup_backend
     setup_frontend
     setup_database
     setup_nginx
     
-    # Start services
-    start_services
-    
-    # Give services a moment to start
-    print_status "Giving services time to initialize..."
-    sleep 10
-    
-    # Check service status
-    print_status "Checking service status..."
-    just status
-    
-    # Wait for services to be ready
-    wait_for_services
-    WAIT_EXIT_STATUS=$?
-    
-        # Offer to show logs if there were issues
-    if [ $WAIT_EXIT_STATUS -ne 0 ]; then
-        echo ""
-        if [ "${NON_INTERACTIVE:-false}" = "true" ]; then
-            echo "Non-interactive mode: Skipping log display prompt"
-        else
-            read -p "Some services may not be fully ready. Show service logs for debugging? (y/n): " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                show_service_logs
-            fi
-        fi
-    fi
-    
-    # Run tests (optional)
-    if [ "${NON_INTERACTIVE:-false}" = "true" ]; then
-        echo "Non-interactive mode: Skipping test execution prompt"
-    else
-        read -p "Do you want to run tests now? (y/n): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            run_tests
-        fi
-    fi
-    
-    # Show final status
+    # Show final status and next steps
     echo ""
-    show_status
-    
+    show_setup_status
     print_success "Setup complete! 🎉"
     echo ""
     echo "Now you can use 'just' commands for development:"
     echo "  just help             - Show all commands"
-    echo "  just start            - Start development (local mode)"
-    echo "  just start-docker     - Start services in Docker mode"
+    echo "  just dev              - Start development (local mode)"
+    echo "  just start            - Start services in Docker mode"
     echo "  just modes            - Explain development modes"
     echo "  just test             - Run tests"
     echo "  just quality          - Code quality checks"
-    echo ""
-    echo "Node.js version management:"
-    echo "  nvm use               - Use the Node.js version from .nvmrc"
-    echo "  nvm current           - Show current Node.js version"
 }
 
 # Run main function

@@ -144,6 +144,7 @@ The setup script (`./setup.sh`) handles the initial environment setup and must b
 - **Database Setup**: Creates database initialization scripts
 - **Nginx Configuration**: Sets up nginx configuration files
 - **Environment Verification**: Checks all prerequisites are met
+- **Smart Configuration**: Creates environment-aware configuration files
 
 ```bash
 # Make setup script executable
@@ -198,8 +199,6 @@ just dev
 **Best for**: Active development, debugging, fast iteration, IDE integration
 
 **Note**: The setup script (`./setup.sh`) must be run at least once to install Python and Node.js dependencies. After that, use `just check-prerequisites` to verify your environment is ready for local development.
-
-
 
 ### 5. Hybrid Setup (Selective Containerization)
 ```bash
@@ -281,7 +280,8 @@ just status
 just logs
 
 # Restart services
-just restart
+just dev-restart  # For development mode
+just restart-docker  # For Docker mode
 ```
 
 ## 🆘 Troubleshooting Prerequisites
@@ -556,6 +556,28 @@ just start    # Docker mode
 # OR
 just dev      # Local mode
 ```
+
+## 🧠 Smart Configuration System
+
+The application now features an intelligent configuration system that automatically adapts to your development environment:
+
+### **Environment Detection**
+- **Local Development**: Backend automatically uses `localhost:5432` and `localhost:6379`
+- **Docker Mode**: Backend automatically uses `postgres:5432` and `redis:6379`
+- **No Configuration Changes**: Switch between modes without modifying `.env` files
+
+### **How It Works**
+1. **Setup Script**: Creates smart configuration files that work in both modes
+2. **Environment Detection**: Backend detects if it's running in Docker or locally
+3. **Automatic Adaptation**: Connection strings automatically adjust based on environment
+4. **Seamless Switching**: Move between modes without any configuration changes
+
+### **Benefits**
+- ✅ **No More Manual Configuration** - System adapts automatically
+- ✅ **Consistent Database Access** - Same credentials work in both modes
+- ✅ **Faster Development** - No need to edit `.env` files when switching modes
+- ✅ **Reduced Errors** - Eliminates configuration-related connection issues
+- ✅ **Team Collaboration** - Everyone uses the same configuration approach
 
 ### 1. Environment Setup
 ```bash
@@ -903,7 +925,8 @@ just status
 just logs
 
 # Restart services
-just restart
+just dev-restart  # For development mode
+just restart-docker  # For Docker mode
 
 # Health check all services
 just health
@@ -993,6 +1016,7 @@ just start            # Start all services (same as dev)
 just dev-backend      # Start backend only
 just dev-frontend     # Start frontend only
 just dev-stop         # Stop development services only (keep DB running)
+just dev-restart      # Restart development services only
 ```
 
 ### Testing
@@ -1022,7 +1046,8 @@ just migrate          # Run migrations
 ```bash
 just start            # Start all services (DB + Redis + Backend + Frontend)
 just stop             # Stop all services
-just restart          # Restart all services
+just dev-restart      # Restart development services
+just restart-docker   # Restart all Docker services
 just status           # Show status and health checks
 just health           # Health check all services
 ```
@@ -1043,17 +1068,25 @@ just info             # Show application info
 
 ### **Daily Development**
 - **Prerequisite Check**: `just check-prerequisites` (verify environment)
-- **Docker Mode**: `just start-docker` (production-like environment)
-- **Local Mode**: `just start` (fast iteration with hot reloading)
+- **Docker Mode**: `just start` (production-like environment)
+- **Local Mode**: `just dev` (fast iteration with hot reloading)
 - **Database Management**: `just db-start`, `just db-seed`
 - **Testing**: `just test`, `just quality`
 - **Service Management**: `just status`, `just logs`
+
+### **Mode Switching**
+- **Development → Docker**: `just dev-stop` then `just start`
+- **Docker → Development**: `just stop` then `just dev`
+- **Development Restart**: `just dev-restart` (keeps database running)
+- **Docker Restart**: `just restart-docker` (full container restart)
 
 ### **Key Points**
 - The setup script handles dependency installation automatically
 - Use `just` commands for day-to-day development
 - Choose between Docker and Local modes based on your needs
 - Database services always run in Docker for consistency
+- Smart configuration automatically adapts to your environment
+- PID management ensures reliable service control
 
 This development guide provides a comprehensive overview of the AI Language Learning application architecture, development workflow, and best practices. Follow these guidelines to ensure consistent, high-quality development and maintainability.
 

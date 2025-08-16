@@ -32,46 +32,31 @@ class AIService:
         self.speech_client: Optional[speech.SpeechClient] = None
 
         # Initialize Google Cloud clients
+        self._initialize_google_cloud_services()
+
+        # Initialize OpenAI client
+        self._initialize_openai_client()
+
+    def _initialize_google_cloud_services(self) -> None:
+        """Initialize Google Cloud services with proper error handling."""
         try:
             credentials, project = default()
             logger.info("Google Cloud credentials obtained successfully")
         except Exception as e:
             logger.error("Failed to obtain Google Cloud credentials", error=str(e))
-            self.translate_client = None
-            self.tts_client = None
-            self.speech_client = None
             return
 
         # Initialize Translation Service
-        try:
-            self.translate_client = translate.TranslationServiceClient()
-            logger.info("Google Cloud Translation service initialized successfully")
-        except Exception as e:
-            logger.error("Failed to initialize Google Cloud Translation service", error=str(e))
-            self.translate_client = None
+        self.translate_client = self._initialize_translate_client()
 
         # Initialize Text-to-Speech Service
-        try:
-            self.tts_client = texttospeech.TextToSpeechClient()
-            logger.info("Google Cloud Text-to-Speech service initialized successfully")
-        except Exception as e:
-            logger.error("Failed to initialize Google Cloud Text-to-Speech service", error=str(e))
-            self.tts_client = None
+        self.tts_client = self._initialize_tts_client()
 
         # Initialize Speech-to-Text Service
-        try:
-            self.speech_client = speech.SpeechClient()
-            logger.info("Google Cloud Speech-to-Text service initialized successfully")
-        except Exception as e:
-            logger.error("Failed to initialize Google Cloud Speech-to-Text service", error=str(e))
-            self.speech_client = None
+        self.speech_client = self._initialize_speech_client()
 
         # Initialize Vertex AI
-        try:
-            aiplatform.init(project=self.google_project, location="us-central1")
-            logger.info("Google Cloud Vertex AI initialized successfully")
-        except Exception as e:
-            logger.error("Failed to initialize Google Cloud Vertex AI", error=str(e))
+        self._initialize_vertex_ai()
 
         # Log summary of initialization status
         services_status = {
@@ -81,7 +66,46 @@ class AIService:
         }
         logger.info("Google Cloud services initialization summary", services_status=services_status)
 
-        # Initialize OpenAI client with validation
+    def _initialize_translate_client(self) -> Optional[translate.TranslationServiceClient]:
+        """Initialize Google Cloud Translation service client."""
+        try:
+            client = translate.TranslationServiceClient()
+            logger.info("Google Cloud Translation service initialized successfully")
+            return client
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Translation service", error=str(e))
+            return None
+
+    def _initialize_tts_client(self) -> Optional[texttospeech.TextToSpeechClient]:
+        """Initialize Google Cloud Text-to-Speech service client."""
+        try:
+            client = texttospeech.TextToSpeechClient()
+            logger.info("Google Cloud Text-to-Speech service initialized successfully")
+            return client
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Text-to-Speech service", error=str(e))
+            return None
+
+    def _initialize_speech_client(self) -> Optional[speech.SpeechClient]:
+        """Initialize Google Cloud Speech-to-Text service client."""
+        try:
+            client = speech.SpeechClient()
+            logger.info("Google Cloud Speech-to-Text service initialized successfully")
+            return client
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Speech-to-Text service", error=str(e))
+            return None
+
+    def _initialize_vertex_ai(self) -> None:
+        """Initialize Google Cloud Vertex AI."""
+        try:
+            aiplatform.init(project=self.google_project, location="us-central1")
+            logger.info("Google Cloud Vertex AI initialized successfully")
+        except Exception as e:
+            logger.error("Failed to initialize Google Cloud Vertex AI", error=str(e))
+
+    def _initialize_openai_client(self) -> None:
+        """Initialize OpenAI client with validation."""
         if self._validate_openai_api_key(settings.OPENAI_API_KEY):
             try:
                 self.openai_client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)

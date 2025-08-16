@@ -98,24 +98,24 @@ async def register_with_information(
     if not table:
         raise ValueError("No registration data provided in table")
 
-    data = table[0]
+    registration_data = table[0]
 
     # Validate required fields exist
     required_fields = ["email", "username", "password", "native_language", "target_language"]
-    missing_fields = [field for field in required_fields if not data.get(field)]
+    missing_fields = [field for field in required_fields if not registration_data.get(field)]
 
     if missing_fields:
         raise ValueError(f"Missing required fields: {missing_fields}")
 
     user_data = UserCreate(
-        email=data["email"],
-        username=data["username"],
-        password=data["password"],
-        first_name=data.get("first_name", ""),
-        last_name=data.get("last_name", ""),
-        native_language=data["native_language"],
-        target_language=data["target_language"],
-        proficiency_level=data.get("proficiency_level", "beginner"),
+        email=registration_data["email"],
+        username=registration_data["username"],
+        password=registration_data["password"],
+        first_name=registration_data.get("first_name", ""),
+        last_name=registration_data.get("last_name", ""),
+        native_language=registration_data["native_language"],
+        target_language=registration_data["target_language"],
+        proficiency_level=registration_data.get("proficiency_level", "beginner"),
     )
 
     # Store for later verification
@@ -195,24 +195,24 @@ async def register_with_only_required_fields(
     if not table:
         raise ValueError("No registration data provided in table")
 
-    data = table[0]
+    registration_data = table[0]
 
     # Validate required fields exist
     required_fields = ["email", "username", "password", "native_language", "target_language"]
-    missing_fields = [field for field in required_fields if not data.get(field)]
+    missing_fields = [field for field in required_fields if not registration_data.get(field)]
 
     if missing_fields:
         raise ValueError(f"Missing required fields: {missing_fields}")
 
     user_data = UserCreate(
-        email=data["email"],
-        username=data["username"],
-        password=data["password"],
-        first_name=data.get("first_name", ""),
-        last_name=data.get("last_name", ""),
-        native_language=data["native_language"],
-        target_language=data["target_language"],
-        proficiency_level=data.get("proficiency_level", "beginner"),
+        email=registration_data["email"],
+        username=registration_data["username"],
+        password=registration_data["password"],
+        first_name=registration_data.get("first_name", ""),
+        last_name=registration_data.get("last_name", ""),
+        native_language=registration_data["native_language"],
+        target_language=registration_data["target_language"],
+        proficiency_level=registration_data.get("proficiency_level", "beginner"),
     )
 
     test_state["registered_user"] = await _register_user(test_session, user_data)

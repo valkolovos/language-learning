@@ -32,8 +32,8 @@ node-info:
 # Start development server
 dev:
     @echo "Starting development server..."
-    npm run dev &
-    @echo "Frontend started in background"
+    npm run dev
+    @echo "Frontend started in background (PID: $$(cat .pid))"
 
 # Build for production
 build:

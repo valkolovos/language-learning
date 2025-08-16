@@ -10,64 +10,59 @@ help:
     @echo "AI Language Learning Application - Available Commands:"
     @echo ""
     @echo "🚀 Quick Start:"
-    @echo "  just start        - Local development mode (fast iteration)"
-    @echo "  just start-docker - Docker mode (production-like environment)"
+    @echo "  just dev         - Local development mode (fast iteration)"
+    @echo "  just start       - Docker mode (production-like environment)"
     @echo ""
     @echo "Full Stack Management:"
-    @echo "  just start        - Start ALL services (DB + Redis + Backend + Frontend)"
-    @echo "  just stop         - Stop ALL services (DB + Redis + Backend + Frontend)"
-    @echo "  just restart      - Restart all services"
-    @echo "  just start-docker - Start ALL services in Docker mode (production-like)"
-    @echo "  just stop-docker  - Stop ALL Docker services"
-    @echo "  just restart-docker - Restart all Docker services"
-    @echo "  just status       - Show service status and health checks"
-    @echo "  just logs         - Show all service logs"
+    @echo "  just start       - Start ALL services in Docker mode"
+    @echo "  just stop        - Stop ALL services"
+    @echo "  just dev-restart - Restart development services only"
+    @echo "  just status      - Show service status and health checks"
+    @echo "  just logs        - Show all service logs"
     @echo ""
     @echo "Development Environment:"
-    @echo "  just dev          - Start development environment (DB + Redis + Backend + Frontend)"
-    @echo "  just dev-stop     - Stop development services only (keep DB + Redis running)"
-    @echo "  just dev-backend  - Start backend development server only"
+    @echo "  just dev         - Start development environment (DB + Redis in Docker, apps locally)"
+    @echo "  just dev-stop    - Stop development services only (keep DB + Redis running)"
+    @echo "  just dev-backend - Start backend development server only"
     @echo "  just dev-frontend - Start frontend development server only"
     @echo ""
     @echo "Docker Mode (Production-like):"
-    @echo "  just start-docker - Start all services in Docker containers"
-    @echo "  just stop-docker  - Stop all Docker services"
+    @echo "  just start       - Start all services in Docker containers"
+    @echo "  just stop        - Stop all services"
     @echo "  just restart-docker - Restart all Docker services"
     @echo ""
     @echo "Database Management:"
-    @echo "  just db-start     - Start database services (PostgreSQL + Redis)"
-    @echo "  just db-stop      - Stop database services"
-    @echo "  just db-reset     - Reset database (WARNING: destroys data)"
-    @echo "  just db-seed      - Seed database with sample data"
+    @echo "  just db-start    - Start database services (PostgreSQL + Redis)"
+    @echo "  just db-stop     - Stop database services"
+    @echo "  just db-reset    - Reset database (WARNING: destroys data)"
+    @echo "  just db-seed     - Seed database with sample data"
     @echo "  just verify-db-health - Verify PostgreSQL and Redis health"
     @echo ""
     @echo "Testing:"
-    @echo "  just test         - Run all tests"
+    @echo "  just test        - Run all tests"
     @echo "  just test-backend - Run backend tests"
     @echo "  just test-frontend - Run frontend tests"
     @echo ""
     @echo "Code Quality:"
-    @echo "  just quality      - Run all quality checks"
-    @echo "  just format       - Format all code"
-    @echo "  just lint         - Lint all code"
+    @echo "  just quality     - Run all quality checks"
+    @echo "  just format      - Format all code"
+    @echo "  just lint        - Lint all code"
     @echo ""
     @echo "Node.js Management:"
-    @echo "  just nvm-use      - Use Node.js version from .nvmrc"
-    @echo "  just node-info    - Show Node.js version information"
+    @echo "  just nvm-use     - Use Node.js version from .nvmrc"
+    @echo "  just node-info   - Show Node.js version information"
     @echo ""
     @echo "Utilities:"
-    @echo "  just clean        - Clean all generated files"
-    @echo "  just docker       - Docker management commands"
-    @echo "  just health       - Health check all services"
-    @echo "  just modes        - Explain development modes"
+    @echo "  just clean       - Clean all generated files"
+    @echo "  just docker      - Docker management commands"
+    @echo "  just health      - Health check all services"
+    @echo "  just modes       - Explain development modes"
     @echo ""
     @echo "Quick Start:"
-    @echo "  just start        - Start everything for development (local mode)"
-    @echo "  just start-docker - Start everything in Docker mode (production-like)"
-    @echo "  just stop         - Stop everything when done"
-    @echo "  just stop-docker  - Stop Docker services"
-    @echo "  just dev          - Alternative to start (same functionality)"
-    @echo "  just dev-stop     - Stop just the app services (keep DB running)"
+    @echo "  just dev         - Start development environment (local mode)"
+    @echo "  just start       - Start everything in Docker mode (production-like)"
+    @echo "  just stop        - Stop everything when done"
+    @echo "  just dev-stop    - Stop just the app services (keep DB running)"
 
 # Complete application setup
 setup:
@@ -167,22 +162,6 @@ verify-db-health:
 
 # Start all services
 start:
-    @echo "Starting all services..."
-    @echo "Starting database services..."
-    docker-compose up -d postgres redis
-    @echo "Waiting for database services to be ready..."
-    @sleep 5
-    @just verify-db-health
-    @echo "Starting application services..."
-    @just dev-backend
-    @just dev-frontend
-    @echo "Waiting for application services to start..."
-    @sleep 10
-    @just status
-    @echo "✅ All services started and verified"
-
-# Start all services in Docker mode (production-like)
-start-docker:
     @echo "Starting all services in Docker mode..."
     @echo "Building Docker images..."
     @just docker-build
@@ -213,12 +192,12 @@ stop-docker:
     docker-compose down
     @echo "✅ All Docker services stopped"
 
-# Restart all services
-restart: stop start
-    @echo "Services restarted!"
+# Restart development services
+dev-restart: dev-stop dev
+    @echo "Development services restarted!"
 
 # Restart all Docker services
-restart-docker: stop-docker start-docker
+restart-docker: stop-docker start
     @echo "Docker services restarted!"
 
 # Show service status
@@ -243,15 +222,22 @@ logs-service service:
 # Development environment
 dev:
     @echo "Starting development environment..."
-    @echo "Verifying database health first..."
-    @just verify-db-health
-    @echo "Starting application services..."
+    @echo "Starting database services in Docker..."
+    @just db-start
+    @echo "Starting application services locally..."
     @just dev-backend
     @just dev-frontend
     @echo "Waiting for services to start..."
     @sleep 10
-    @just status
     @echo "Development environment started! 🚀"
+    @echo ""
+    @echo "Services running:"
+    @echo "  Database: PostgreSQL + Redis (Docker)"
+    @echo "  Backend: http://localhost:8000 (local)"
+    @echo "  Frontend: http://localhost:3000 (local)"
+    @echo ""
+    @echo "Use 'just dev-stop' to stop development services"
+    @echo "Use 'just stop' to stop everything including database"
 
 # Start backend development server
 dev-backend:
@@ -291,25 +277,6 @@ dev-stop:
         echo "No frontend PID file found"; \
     fi
     @echo "Development environment stopped! 🛑"
-
-# Restart frontend development server
-dev-restart-frontend:
-    @echo "Restarting frontend development server..."
-    @echo "Stopping frontend..."
-    @if [ -f "frontend/.pid" ]; then \
-        PID=$(cat frontend/.pid 2>/dev/null); \
-        if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then \
-            kill "$PID" && echo "Frontend stopped (PID: $PID)" || echo "Failed to stop frontend"; \
-        else \
-            echo "Frontend PID file invalid or process not running"; \
-        fi; \
-        rm -f frontend/.pid; \
-    else \
-        echo "No frontend PID file found"; \
-    fi
-    @echo "Starting frontend..."
-    @just dev-frontend
-    @echo "Frontend restarted! 🔄"
 
 # Run all tests
 test: test-backend test-frontend
@@ -365,7 +332,7 @@ lint-fix-frontend:
 
 # Format code
 format: format-backend format-frontend
-    @echo "All code formatting completed! 🎨"
+    @echo "All code formatting completed! ��"
 
 # Format backend code
 format-backend:
@@ -438,21 +405,21 @@ node-info:
 modes:
     @echo "Development Modes:"
     @echo ""
-    @echo "🐳 Docker Mode (just start-docker):"
+    @echo "🐳 Docker Mode (just start):"
     @echo "  • All services run in Docker containers"
     @echo "  • Production-like environment"
     @echo "  • Good for: demos, testing, team onboarding"
     @echo "  • Slower development cycle (rebuild containers for changes)"
     @echo ""
-    @echo "💻 Local Mode (just start):"
+    @echo "💻 Local Mode (just dev):"
     @echo "  • Database services in Docker, app services locally"
     @echo "  • Fast development iteration with hot reloading"
     @echo "  • Good for: active development, debugging, fast iteration"
     @echo "  • Requires local Python/Node.js setup"
     @echo ""
     @echo "🔄 Switching:"
-    @echo "  • From Docker to Local: just stop-docker && just start"
-    @echo "  • From Local to Docker: just stop && just start-docker"
+    @echo "  • From Docker to Local: just stop && just dev"
+    @echo "  • From Local to Docker: just dev-stop && just start"
 
 # Database management
 db-start:

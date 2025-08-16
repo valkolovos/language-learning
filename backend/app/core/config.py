@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Trusted Hosts - Hostnames for TrustedHostMiddleware
     TRUSTED_HOSTS: str = "localhost,127.0.0.1,0.0.0.0"
 
+    # Allowed Hosts - For host validation
+    ALLOWED_HOSTS: str = "http://localhost:3000,http://localhost:8000"
+
     # Database
     DATABASE_URL: str = "postgresql://postgres:password@postgres:5432/language_learning"
     DATABASE_POOL_SIZE: int = 20
@@ -38,6 +41,9 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://redis:6379"
     REDIS_POOL_SIZE: int = 10
+
+    # Database credentials for environment detection
+    POSTGRES_PASSWORD: str = "password"
 
     # Google Cloud
     GOOGLE_CLOUD_PROJECT: str = "your-google-cloud-project-id"
@@ -68,6 +74,42 @@ class Settings(BaseSettings):
     # Testing
     TESTING: bool = False
     TEST_DATABASE_URL: Optional[str] = None
+    TEST_DB_USER: Optional[str] = None
+    TEST_DB_PASSWORD: Optional[str] = None
+    TEST_DB_HOST: Optional[str] = None
+    TEST_DB_PORT: Optional[int] = None
+    TEST_DB_NAME: Optional[str] = None
+
+    # Environment Detection
+    # Note: When running in Docker, the backend will automatically use the correct
+    # database host (postgres) and redis host (redis) due to Docker networking.
+    # When running locally, it will use localhost for both.
+
+    @property
+    def database_url(self) -> str:
+        """Get database URL with environment-aware host detection."""
+        # Check if we're running in Docker by looking for container environment
+        import os
+
+        if os.path.exists("/.dockerenv") or os.environ.get("DOCKER_CONTAINER"):
+            # Running in Docker - use service names
+            return f"postgresql://postgres:{self.POSTGRES_PASSWORD}@postgres:5432/language_learning"
+        else:
+            # Running locally - use localhost
+            return f"postgresql://postgres:{self.POSTGRES_PASSWORD}@localhost:5432/language_learning"
+
+    @property
+    def redis_url(self) -> str:
+        """Get Redis URL with environment-aware host detection."""
+        # Check if we're running in Docker
+        import os
+
+        if os.path.exists("/.dockerenv") or os.environ.get("DOCKER_CONTAINER"):
+            # Running in Docker - use service names
+            return "redis://redis:6379"
+        else:
+            # Running locally - use localhost
+            return "redis://localhost:6379"
 
     @property
     def cors_origins_list(self) -> List[str]:
