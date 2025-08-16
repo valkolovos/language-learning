@@ -1,5 +1,12 @@
 """
 AI service integration for language learning features.
+
+Maintenance Notes:
+- OpenAI API key validation rules are configurable in app/core/config.py
+- Last verified format: 2024 (sk- prefix, typically 51 characters)
+- To update validation rules: modify settings in config.py and update "Last verified" comment
+- Runtime updates available via update_validation_rules() method
+- Check https://platform.openai.com/docs/api-keys for current format
 """
 
 import json
@@ -757,16 +764,24 @@ class AIService:
             return {"error": f"Failed to extract usage: {str(e)}"}
 
     def _validate_openai_api_key(self, api_key: Optional[str]) -> bool:
-        """Validate OpenAI API key format and presence."""
-        # OpenAI API key format constants
-        # As of 2024, OpenAI API keys:
-        # - Start with 'sk-' prefix (3 characters)
-        # - Are typically 51 characters total length
-        # - Have a minimum reasonable length of 20 characters
-        # These values may change with future OpenAI API updates
-        OPENAI_API_KEY_PREFIX = "sk-"
-        OPENAI_API_KEY_TYPICAL_LENGTH = 51
-        OPENAI_API_KEY_MIN_LENGTH = 20
+        """Validate OpenAI API key format and presence.
+
+        Note: This validation is based on OpenAI API key format as of 2024.
+        OpenAI may change their key format in the future, which would require
+        updating these validation rules.
+
+        Last verified: 2024
+        OpenAI API key format:
+        - Start with 'sk-' prefix (3 characters)
+        - Are typically 51 characters total length
+        - Have a minimum reasonable length of 20 characters
+
+        For the most current format, check: https://platform.openai.com/docs/api-keys
+        """
+        # Use configurable validation settings from config
+        OPENAI_API_KEY_PREFIX = settings.OPENAI_API_KEY_PREFIX
+        OPENAI_API_KEY_TYPICAL_LENGTH = settings.OPENAI_API_KEY_TYPICAL_LENGTH
+        OPENAI_API_KEY_MIN_LENGTH = settings.OPENAI_API_KEY_MIN_LENGTH
 
         if not api_key:
             logger.warning("OpenAI API key is not set")
@@ -794,14 +809,53 @@ class AIService:
 
         # Log the actual length for debugging (without exposing the full key)
         actual_length = len(api_key)
+
+        # More flexible length validation - allow for format changes
+        if actual_length < OPENAI_API_KEY_MIN_LENGTH:
+            logger.warning(
+                f"OpenAI API key appears to be too short - "
+                f"minimum expected length is {OPENAI_API_KEY_MIN_LENGTH} characters"
+            )
+            return False
+
+        # Log length info for debugging, but don't fail validation for non-typical lengths
         if actual_length != OPENAI_API_KEY_TYPICAL_LENGTH:
             logger.info(
                 f"OpenAI API key length is {actual_length} characters "
-                f"(typical length is {OPENAI_API_KEY_TYPICAL_LENGTH})"
+                f"(typical length is {OPENAI_API_KEY_TYPICAL_LENGTH}, but this may vary)"
             )
+        else:
+            logger.info(f"OpenAI API key length matches typical format: {actual_length} characters")
 
         logger.info("OpenAI API key validation passed")
         return True
+
+    def update_validation_rules(
+        self, prefix: Optional[str] = None, min_length: Optional[int] = None, typical_length: Optional[int] = None
+    ) -> None:
+        """Update OpenAI API key validation rules at runtime.
+
+        This method allows updating validation rules without restarting the service.
+        Useful for adapting to format changes or testing different validation criteria.
+
+        Args:
+            prefix: New API key prefix to validate against
+            min_length: New minimum length requirement
+            typical_length: New typical length for logging purposes
+        """
+        if prefix is not None:
+            settings.OPENAI_API_KEY_PREFIX = prefix
+            logger.info(f"Updated OpenAI API key prefix to: {prefix}")
+
+        if min_length is not None:
+            settings.OPENAI_API_KEY_MIN_LENGTH = min_length
+            logger.info(f"Updated OpenAI API key minimum length to: {min_length}")
+
+        if typical_length is not None:
+            settings.OPENAI_API_KEY_TYPICAL_LENGTH = typical_length
+            logger.info(f"Updated OpenAI API key typical length to: {typical_length}")
+
+        logger.info("OpenAI API key validation rules updated successfully")
 
 
 # Global AI service instance

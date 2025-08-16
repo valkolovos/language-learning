@@ -515,7 +515,7 @@ EOF
 setup_backend() {
     print_status "Setting up backend environment..."
     
-    cd backend
+    cd backend || { print_error "Failed to enter backend directory"; exit 1; }
     
     # Create virtual environment using uv
     if [ ! -d ".venv" ]; then
@@ -618,7 +618,7 @@ EOF
         print_status "Backend .env file already exists"
     fi
     
-    cd ..
+    cd .. || { print_error "Failed to return to root directory"; exit 1; }
     print_success "Backend environment setup complete"
 }
 
@@ -626,12 +626,12 @@ EOF
 setup_frontend() {
     print_status "Setting up frontend environment..."
     
-    cd frontend
+    cd frontend || { print_error "Failed to enter frontend directory"; exit 1; }
     
     # Ensure we're using the correct Node.js version
-    cd ..
+    cd .. || { print_error "Failed to return to root directory"; exit 1; }
     nvm use
-    cd frontend
+    cd frontend || { print_error "Failed to enter frontend directory"; exit 1; }
     
     # Install dependencies
     print_status "Installing Node.js dependencies..."
@@ -643,7 +643,7 @@ setup_frontend() {
         echo "REACT_APP_API_URL=http://localhost:8000" > .env
     fi
     
-    cd ..
+    cd .. || { print_error "Failed to return to root directory"; exit 1; }
     print_success "Frontend environment setup complete"
 }
 

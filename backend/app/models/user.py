@@ -30,7 +30,15 @@ logger = structlog.get_logger(__name__)
 
 
 class User(Base):
-    """User model with learning progress tracking."""
+    """User model with learning progress tracking.
+
+    Level System:
+    - Users start at level 0 with 0 XP
+    - Each level requires exactly XP_PER_LEVEL (1000) XP
+    - Level 0: 0-999 XP, Level 1: 1000-1999 XP, etc.
+    - This creates a consistent progression system where each level
+      represents the same amount of learning effort.
+    """
 
     __tablename__ = "users"
 
@@ -121,22 +129,39 @@ class User(Base):
 
     @property
     def level(self) -> int:
-        """Calculate user level based on total XP."""
-        # Simple level calculation: every XP_PER_LEVEL XP = 1 level
-        return (self.total_xp // self.XP_PER_LEVEL) + 1
+        """Calculate user level based on total XP.
+
+        Level progression:
+        - Level 0: 0-999 XP (new users)
+        - Level 1: 1000-1999 XP
+        - Level 2: 2000-2999 XP
+        - etc.
+
+        This ensures consistent progression where each level requires exactly XP_PER_LEVEL XP.
+        """
+        return self.total_xp // self.XP_PER_LEVEL
 
     @property
     def xp_to_next_level(self) -> int:
-        """Calculate XP needed for next level."""
+        """Calculate XP needed for next level.
+
+        Returns the XP needed to reach the next level.
+        For users at level 0, this will be the XP needed to reach level 1.
+        """
         current_level = self.level
-        return current_level * self.XP_PER_LEVEL - self.total_xp
+        next_level_xp = (current_level + 1) * self.XP_PER_LEVEL
+        return next_level_xp - self.total_xp
 
     @property
     def progress_to_next_level(self) -> float:
-        """Calculate progress percentage to next level."""
+        """Calculate progress percentage to next level.
+
+        Returns a value between 0.0 and 1.0 representing progress to the next level.
+        For users at level 0, this shows progress from 0 XP to the XP needed for level 1.
+        """
         xp_needed = self.xp_to_next_level
         if xp_needed == 0:
-            return 1.0
+            return 1.0  # User has reached the next level
         return 1 - (xp_needed / self.XP_PER_LEVEL)
 
     def add_xp(self, amount: int, source: str = "lesson") -> None:
@@ -151,6 +176,27 @@ class User(Base):
             source=source,
             new_total=self.total_xp,
         )
+
+    def get_level_info(self) -> Dict[str, Any]:
+        """Get comprehensive level information for the user.
+
+        Returns:
+            Dictionary containing level details including current level,
+            XP range for current level, and progress information.
+        """
+        current_level = self.level
+        level_start_xp = current_level * self.XP_PER_LEVEL
+        level_end_xp = (current_level + 1) * self.XP_PER_LEVEL - 1
+
+        return {
+            "current_level": current_level,
+            "level_start_xp": level_start_xp,
+            "level_end_xp": level_end_xp,
+            "xp_in_current_level": self.total_xp - level_start_xp,
+            "xp_to_next_level": self.xp_to_next_level,
+            "progress_to_next_level": self.progress_to_next_level,
+            "total_xp": self.total_xp,
+        }
 
     def update_streak(self, study_date: datetime) -> None:
         """Update learning streak based on study date."""

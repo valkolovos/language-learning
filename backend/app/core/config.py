@@ -53,6 +53,14 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     AI_MODEL_NAME: str = "gpt-4"
 
+    # OpenAI API Key Validation Settings
+    # These can be updated if OpenAI changes their key format
+    # Last verified: 2024 - check https://platform.openai.com/docs/api-keys for current format
+    # To update: modify these values and update the "Last verified" comment above
+    OPENAI_API_KEY_PREFIX: str = "sk-"
+    OPENAI_API_KEY_MIN_LENGTH: int = 20
+    OPENAI_API_KEY_TYPICAL_LENGTH: int = 51
+
     # Learning Engine - Using default values to avoid parsing issues
     SPACED_REPETITION_INTERVALS: str = "1,3,7,14,30,90,180,365"
     MAX_DAILY_LESSONS: int = 5
