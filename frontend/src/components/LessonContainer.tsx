@@ -20,9 +20,9 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   // Initialize services using refs to avoid dependency issues
   const eventTracking = useRef(EventTrackingService.getInstance());
 
-  // Initialize audio playback hook - only when we have a lesson
+  // Initialize audio playback hook
   const { playbackState, playAudio, stopAudio, resetPlayback } =
-    useAudioPlayback(lesson?.mainLine?.audio?.id || "temp-id");
+    useAudioPlayback();
 
   useEffect(() => {
     const loadLesson = async () => {

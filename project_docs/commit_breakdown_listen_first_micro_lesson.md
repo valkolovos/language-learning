@@ -342,3 +342,12 @@ The following BDD features will be implemented throughout the commits:
 - Keep audio local and avoid external dependencies
 - Maintain focus on the listen-first learning pattern
 - Document any deviations from the specification
+
+## Future Enhancements
+
+### Audio Quality Improvements
+- **Google TTS API Integration**: Replace Web Speech API with Google's Text-to-Speech API for significantly better pronunciation quality, especially for non-Latin scripts like Greek. This would require:
+  - API key management
+  - Fallback to Web Speech API for offline scenarios
+  - Enhanced language support and voice selection
+  - Better accent and pronunciation accuracy

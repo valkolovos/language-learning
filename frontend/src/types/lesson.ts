@@ -1,8 +1,10 @@
 export interface AudioClip {
   id: string;
-  filename: string;
-  duration?: number; // in seconds
-  volume?: number; // 0-1, for normalization guidance
+  filename?: string; // Optional for TTS
+  text: string; // Text to speak for TTS
+  duration: number;
+  volume: number;
+  language?: string; // Language code for TTS (e.g., 'el-GR' for Greek)
 }
 
 export interface Phrase {

@@ -4,9 +4,9 @@ import { AudioPlayer } from "../AudioPlayer";
 import { AudioClip } from "../../types/lesson";
 
 const mockAudioClip: AudioClip = {
-  id: "test-audio-1",
-  filename: "test-audio.mp3",
-  duration: 2.5,
+  id: "test-audio",
+  text: "Hello world",
+  duration: 2.0,
   volume: 0.8,
 };
 

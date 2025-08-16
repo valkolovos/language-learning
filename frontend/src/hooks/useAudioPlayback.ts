@@ -1,12 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { AudioPlaybackService } from "../services/audioPlaybackService";
-import {
-  AudioPlaybackState,
-  AudioPlaybackEvent,
-  AudioClip,
-} from "../types/lesson";
+import { AudioClip, AudioPlaybackState } from "../types/lesson";
 
-export const useAudioPlayback = (mainLineAudioId: string) => {
+export const useAudioPlayback = () => {
   const [playbackState, setPlaybackState] = useState<AudioPlaybackState>({
     isPlaying: false,
     currentAudioId: null,
@@ -15,59 +11,63 @@ export const useAudioPlayback = (mainLineAudioId: string) => {
     error: null,
   });
 
-  const audioService = useRef<AudioPlaybackService>(
-    AudioPlaybackService.getInstance(),
-  );
-  const unsubscribeRef = useRef<(() => void) | null>(null);
+  const audioService = useRef<AudioPlaybackService | null>(null);
 
-  // Initialize audio service when component mounts
   useEffect(() => {
-    const service = audioService.current;
-    service.initialize(mainLineAudioId);
+    try {
+      audioService.current = AudioPlaybackService.getInstance();
 
-    // Subscribe to playback events
-    const unsubscribe = service.subscribe((event: AudioPlaybackEvent) => {
-      // Update local state based on service state
-      setPlaybackState(service.getState());
-    });
+      const handlePlaybackEvent = (event: any) => {
+        setPlaybackState(audioService.current!.getCurrentState());
+      };
 
-    unsubscribeRef.current = unsubscribe;
+      audioService.current.addEventListener(handlePlaybackEvent);
 
-    // Cleanup on unmount
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
+      return () => {
+        if (audioService.current) {
+          audioService.current.removeEventListener(handlePlaybackEvent);
+        }
+      };
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Failed to initialize audio service:", error);
       }
-      service.destroy();
-    };
-  }, [mainLineAudioId]);
+    }
+  }, []);
 
-  // Play audio function
   const playAudio = useCallback(async (audioClip: AudioClip) => {
+    if (!audioService.current) {
+      throw new Error("Audio service not initialized");
+    }
+
     try {
       await audioService.current.playAudio(audioClip);
     } catch (error) {
       if (process.env.NODE_ENV === "development") {
         console.error("Failed to play audio:", error);
       }
+      throw error;
     }
   }, []);
 
-  // Stop audio function
   const stopAudio = useCallback(() => {
-    audioService.current.stopAudio();
+    if (audioService.current) {
+      audioService.current.stopAudio();
+    }
   }, []);
 
-  // Reset playback state
   const resetPlayback = useCallback(() => {
-    audioService.current.resetState();
-    setPlaybackState(audioService.current.getState());
+    if (audioService.current) {
+      audioService.current.resetPlayback();
+    }
   }, []);
 
-  // Get current state
   const getCurrentState = useCallback(() => {
-    return audioService.current.getState();
-  }, []);
+    if (audioService.current) {
+      return audioService.current.getCurrentState();
+    }
+    return playbackState;
+  }, [playbackState]);
 
   return {
     playbackState,

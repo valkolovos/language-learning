@@ -1,23 +1,28 @@
 import {
+  AudioClip,
   AudioPlaybackState,
   AudioPlaybackEvent,
-  AudioClip,
 } from "../types/lesson";
 
 export class AudioPlaybackService {
   private static instance: AudioPlaybackService;
-  private audioElement: HTMLAudioElement | null = null;
-  private currentState: AudioPlaybackState = {
-    isPlaying: false,
-    currentAudioId: null,
-    playCount: 0,
-    canReveal: false,
-    error: null,
-  };
+  private speechSynthesis: SpeechSynthesis;
+  private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private isPlaying: boolean = false;
+  private currentAudioId: string | null = null;
+  private playCount: number = 0;
+  private canReveal: boolean = false;
+  private error: string | null = null;
   private eventListeners: ((event: AudioPlaybackEvent) => void)[] = [];
-  private mainLineAudioId: string | null = null;
 
-  private constructor() {}
+  private constructor() {
+    // Check if Web Speech API is supported
+    if (!window.speechSynthesis) {
+      throw new Error("Web Speech API not supported in this browser");
+    }
+
+    this.speechSynthesis = window.speechSynthesis;
+  }
 
   static getInstance(): AudioPlaybackService {
     if (!AudioPlaybackService.instance) {
@@ -27,61 +32,52 @@ export class AudioPlaybackService {
   }
 
   /**
-   * Initialize the service with the main line audio ID for play counting
-   */
-  initialize(mainLineAudioId: string): void {
-    this.mainLineAudioId = mainLineAudioId;
-    this.resetState();
-  }
-
-  /**
-   * Get current playback state
-   */
-  getState(): AudioPlaybackState {
-    return { ...this.currentState };
-  }
-
-  /**
-   * Play an audio clip
+   * Play audio using text-to-speech
    */
   async playAudio(audioClip: AudioClip): Promise<void> {
     try {
       // Stop any currently playing audio
       this.stopAudio();
 
-      // Create new audio element
-      this.audioElement = new Audio();
-      this.audioElement.src = audioClip.filename; // Will be resolved to full URL by caller
-      this.audioElement.volume = audioClip.volume || 0.8;
+      // Create new utterance
+      this.currentUtterance = new SpeechSynthesisUtterance(audioClip.text);
 
-      // Set up event listeners
-      this.audioElement.addEventListener("loadstart", () => {
-        this.currentState.isPlaying = true;
-        this.currentState.currentAudioId = audioClip.id;
-        this.currentState.error = null;
-        this.emitEvent({
-          type: "play_started",
-          audioId: audioClip.id,
-          timestamp: Date.now(),
-        });
+      // Configure TTS settings
+      this.currentUtterance.lang = audioClip.language || "en-US";
+      this.currentUtterance.volume = audioClip.volume;
+      this.currentUtterance.rate = 0.9; // Slightly slower for language learning
+      this.currentUtterance.pitch = 1.0;
+
+      // Set up utterance event handlers
+      this.currentUtterance.onstart = () =>
+        this.handleSpeechStart(audioClip.id);
+      this.currentUtterance.onend = () => this.handleSpeechEnd();
+      this.currentUtterance.onerror = (event) => this.handleSpeechError(event);
+
+      // Update state
+      this.isPlaying = true;
+      this.currentAudioId = audioClip.id;
+      this.error = null;
+
+      // Start speaking
+      this.speechSynthesis.speak(this.currentUtterance);
+
+      // Emit play started event
+      this.emitEvent({
+        type: "play_started",
+        audioId: audioClip.id,
+        timestamp: Date.now(),
+        details: { text: audioClip.text, language: audioClip.language },
       });
-
-      this.audioElement.addEventListener("ended", () => {
-        this.handlePlayCompleted(audioClip.id);
-      });
-
-      this.audioElement.addEventListener("error", (e) => {
-        this.handlePlayError(audioClip.id, e);
-      });
-
-      this.audioElement.addEventListener("abort", () => {
-        this.handlePlayAborted(audioClip.id);
-      });
-
-      // Start playback
-      await this.audioElement.play();
     } catch (error) {
-      this.handlePlayError(audioClip.id, error);
+      this.error = `Failed to start TTS: ${error}`;
+      this.emitEvent({
+        type: "play_error",
+        audioId: audioClip.id,
+        timestamp: Date.now(),
+        details: { error: this.error },
+      });
+      throw new Error(this.error);
     }
   }
 
@@ -89,114 +85,106 @@ export class AudioPlaybackService {
    * Stop current audio playback
    */
   stopAudio(): void {
-    if (this.audioElement) {
-      this.audioElement.pause();
-      this.audioElement.currentTime = 0;
-      this.audioElement = null;
+    if (this.currentUtterance && this.isPlaying) {
+      this.speechSynthesis.cancel();
+
+      this.emitEvent({
+        type: "play_aborted",
+        audioId: this.currentAudioId || "unknown",
+        timestamp: Date.now(),
+      });
     }
 
-    if (this.currentState.isPlaying) {
-      this.currentState.isPlaying = false;
-      this.currentState.currentAudioId = null;
-    }
+    this.isPlaying = false;
+    this.currentAudioId = null;
+    this.currentUtterance = null;
   }
 
   /**
-   * Handle successful completion of audio playback
+   * Get current playback state
    */
-  private handlePlayCompleted(audioId: string): void {
-    this.currentState.isPlaying = false;
-    this.currentState.currentAudioId = null;
+  getCurrentState(): AudioPlaybackState {
+    return {
+      isPlaying: this.isPlaying,
+      currentAudioId: this.currentAudioId,
+      playCount: this.playCount,
+      canReveal: this.canReveal,
+      error: this.error,
+    };
+  }
 
-    // Only count main line plays for the reveal gate
-    if (audioId === this.mainLineAudioId) {
-      this.currentState.playCount++;
+  /**
+   * Reset playback state (used when changing lessons)
+   */
+  resetPlayback(): void {
+    this.stopAudio();
+    this.playCount = 0;
+    this.canReveal = false;
+    this.error = null;
+  }
 
-      // Check if reveal gate should unlock
-      if (this.currentState.playCount >= 2) {
-        this.currentState.canReveal = true;
+  /**
+   * Add event listener
+   */
+  addEventListener(listener: (event: AudioPlaybackEvent) => void): void {
+    this.eventListeners.push(listener);
+  }
+
+  /**
+   * Remove event listener
+   */
+  removeEventListener(listener: (event: AudioPlaybackEvent) => void): void {
+    const index = this.eventListeners.indexOf(listener);
+    if (index > -1) {
+      this.eventListeners.splice(index, 1);
+    }
+  }
+
+  // Private event handlers
+  private handleSpeechStart(audioId: string): void {
+    this.isPlaying = true;
+    this.currentAudioId = audioId;
+  }
+
+  private handleSpeechEnd(): void {
+    this.isPlaying = false;
+
+    // Only count complete plays of the main line
+    if (this.currentAudioId === "main-line-audio") {
+      this.playCount++;
+
+      // Check if we can reveal text (after 2 complete plays)
+      if (this.playCount >= 2) {
+        this.canReveal = true;
       }
     }
 
     this.emitEvent({
       type: "play_completed",
-      audioId,
+      audioId: this.currentAudioId || "unknown",
       timestamp: Date.now(),
+      details: { playCount: this.playCount, canReveal: this.canReveal },
     });
+
+    this.currentUtterance = null;
+    this.currentAudioId = null;
   }
 
-  /**
-   * Handle audio playback errors
-   */
-  private handlePlayError(audioId: string, error: any): void {
-    this.currentState.isPlaying = false;
-    this.currentState.currentAudioId = null;
-    this.currentState.error = `Failed to play audio: ${error.message || "Unknown error"}`;
+  private handleSpeechError(event: SpeechSynthesisErrorEvent): void {
+    this.error = `TTS Error: ${event.error}`;
+    this.isPlaying = false;
+    this.currentUtterance = null;
+    this.currentAudioId = null;
 
     this.emitEvent({
       type: "play_error",
-      audioId,
+      audioId: this.currentAudioId || "unknown",
       timestamp: Date.now(),
-      details: error,
+      details: { error: this.error },
     });
   }
 
-  /**
-   * Handle aborted audio playback
-   */
-  private handlePlayAborted(audioId: string): void {
-    this.currentState.isPlaying = false;
-    this.currentState.currentAudioId = null;
-
-    this.emitEvent({
-      type: "play_aborted",
-      audioId,
-      timestamp: Date.now(),
-    });
-  }
-
-  /**
-   * Reset playback state (useful for starting a new lesson)
-   */
-  resetState(): void {
-    this.stopAudio();
-    this.currentState = {
-      isPlaying: false,
-      currentAudioId: null,
-      playCount: 0,
-      canReveal: false,
-      error: null,
-    };
-  }
-
-  /**
-   * Subscribe to playback events
-   */
-  subscribe(listener: (event: AudioPlaybackEvent) => void): () => void {
-    this.eventListeners.push(listener);
-
-    // Return unsubscribe function
-    return () => {
-      const index = this.eventListeners.indexOf(listener);
-      if (index > -1) {
-        this.eventListeners.splice(index, 1);
-      }
-    };
-  }
-
-  /**
-   * Emit events to all subscribers
-   */
   private emitEvent(event: AudioPlaybackEvent): void {
     this.eventListeners.forEach((listener) => listener(event));
-  }
-
-  /**
-   * Clean up resources
-   */
-  destroy(): void {
-    this.stopAudio();
-    this.eventListeners = [];
-    this.mainLineAudioId = null;
   }
 }

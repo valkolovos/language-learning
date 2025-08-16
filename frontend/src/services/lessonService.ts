@@ -5,27 +5,29 @@ const SAMPLE_LESSON: Lesson = {
   id: "meet-greet-001",
   title: "Meet & Greet",
   mainLine: {
-    nativeText: "Γεια σου, πώς είσαι;",
+    nativeText: "Γειά σου, πώς είσαι;",
     gloss: "Hello, how are you?",
     tips: "A friendly greeting in Greek",
     audio: {
       id: "main-line-audio",
-      filename: "geia-sou-pos-eisai.mp3",
+      text: "Γειά σου, πώς είσαι;",
       duration: 2.3,
       volume: 0.8,
+      language: "el-GR", // Greek language code
     },
   },
   phrases: [
     {
       id: "phrase-1",
-      nativeText: "Γεια σου",
+      nativeText: "Γειά σου",
       gloss: "Hello",
       tips: 'Informal greeting, pronounced "ya soo"',
       audio: {
         id: "phrase-1-audio",
-        filename: "geia-sou.mp3",
+        text: "Γειά σου",
         duration: 1.0,
         volume: 0.8,
+        language: "el-GR",
       },
     },
     {
@@ -35,9 +37,10 @@ const SAMPLE_LESSON: Lesson = {
       tips: 'Question form, literally "how are you?"',
       audio: {
         id: "phrase-2-audio",
-        filename: "pos-eisai.mp3",
+        text: "πώς είσαι;",
         duration: 1.3,
         volume: 0.8,
+        language: "el-GR",
       },
     },
     {
@@ -47,9 +50,10 @@ const SAMPLE_LESSON: Lesson = {
       tips: 'Common response to "how are you?"',
       audio: {
         id: "phrase-3-audio",
-        filename: "kala-efharisto.mp3",
+        text: "Καλά, ευχαριστώ",
         duration: 1.4,
         volume: 0.8,
+        language: "el-GR",
       },
     },
   ],
@@ -61,17 +65,6 @@ const SAMPLE_LESSON: Lesson = {
 };
 
 export class LessonService {
-  /**
-   * Get the public URL for an audio file
-   * @param filename - The audio filename
-   * @returns string - The public URL for the audio file
-   */
-  static getAudioUrl(filename: string): string {
-    // In a real app, this would point to your audio assets
-    // For now, we'll use placeholder URLs that would work with actual audio files
-    return `/audio/${filename}`;
-  }
-
   /**
    * Load a lesson by ID
    * @param lessonId - The unique identifier for the lesson
