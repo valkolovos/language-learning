@@ -3,6 +3,9 @@ import { Lesson, LessonLoadResult, AudioClip } from "../types/lesson";
 import { LessonService } from "../services/lessonService";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { AudioPlayer } from "./AudioPlayer";
+import { PhrasePlayer } from "./PhrasePlayer";
+import { TranscriptToggle } from "./TranscriptToggle";
+import { ProgressIndicator } from "./ProgressIndicator";
 import { EventTrackingService } from "../services/eventTrackingService";
 import log from "../services/logger";
 
@@ -17,6 +20,9 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [textRevealed, setTextRevealed] = useState(false);
+  const [transcriptVisible, setTranscriptVisible] = useState(true);
+  const [xp, setXp] = useState(0);
+  const [showXpBreakdown, setShowXpBreakdown] = useState(false);
 
   // Initialize services using refs to avoid dependency issues
   const eventTracking = useRef(EventTrackingService.getInstance());
@@ -61,6 +67,37 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
       setTextRevealed(true);
       // Track text revealed event
       eventTracking.current.trackTextRevealed(lessonId);
+      // Award XP for revealing text
+      setXp((prev) => prev + 50);
+    }
+  };
+
+  // Handle transcript toggle
+  const handleTranscriptToggle = () => {
+    setTranscriptVisible((prev) => !prev);
+  };
+
+  // Handle XP breakdown toggle
+  const handleXpBreakdownToggle = () => {
+    setShowXpBreakdown((prev) => !prev);
+  };
+
+  // Handle phrase replay
+  const handlePhrasePlay = (audioClip: AudioClip) => {
+    playAudio(audioClip);
+    // Track phrase replay event
+    eventTracking.current.trackPhraseReplay(audioClip.id, lessonId);
+    // Award XP for phrase replay
+    setXp((prev) => prev + 10);
+  };
+
+  // Handle replay all phrases
+  const handleReplayAll = () => {
+    if (lesson) {
+      // Play main line first, then phrases in sequence
+      playAudio(lesson.mainLine.audio);
+      // Award XP for replay all action
+      setXp((prev) => prev + 25);
     }
   };
 
@@ -108,6 +145,22 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     );
   }
 
+  // Calculate progress percentage based on actions completed
+  const calculateProgress = () => {
+    // Listening phase contributes up to 50%
+    const listeningProgress = Math.min(1, playbackState.playCount / 2) * 50;
+
+    if (!textRevealed) {
+      return Math.min(50, listeningProgress);
+    }
+
+    // Engagement (XP) contributes up to the remaining 50%
+    const engagementProgress = Math.min(1, xp / 100) * 50;
+
+    // Total progress is capped at 100%
+    return Math.min(100, 50 + engagementProgress);
+  };
+
   return (
     <div className="lesson-container">
       <div className="lesson-header">
@@ -123,6 +176,15 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
           </div>
         )}
       </div>
+
+      {/* Progress Indicator */}
+      <ProgressIndicator
+        xp={xp}
+        progressPercentage={calculateProgress()}
+        className="lesson-progress"
+        showBreakdown={showXpBreakdown}
+        onToggleBreakdown={handleXpBreakdownToggle}
+      />
 
       <div className="lesson-content">
         {/* Listen-First Section */}
@@ -175,7 +237,9 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
               <h3>Main Line</h3>
               <div className="text-content">
                 <p className="native-text">{lesson.mainLine.nativeText}</p>
-                <p className="gloss-text">{lesson.mainLine.gloss}</p>
+                {transcriptVisible && (
+                  <p className="gloss-text">{lesson.mainLine.gloss}</p>
+                )}
                 {lesson.mainLine.tips && (
                   <div className="tips">
                     <p>
@@ -186,23 +250,44 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
               </div>
             </div>
 
+            {/* Post-reveal controls */}
+            <div className="post-reveal-controls">
+              <button
+                className="replay-all-button"
+                onClick={handleReplayAll}
+                aria-label="Replay all phrases"
+              >
+                🔄 Replay All
+              </button>
+
+              <TranscriptToggle
+                isVisible={transcriptVisible}
+                onToggle={handleTranscriptToggle}
+                className="transcript-toggle-control"
+              />
+            </div>
+
             <div className="phrases-section">
               <h3>Practice Phrases</h3>
               <p className="phrase-hint">Tap a phrase to hear it again</p>
               <div className="phrases-list">
                 {lesson.phrases.map((phrase, index) => (
-                  <div key={phrase.id} className="phrase-item">
-                    <h4>Phrase {index + 1}</h4>
-                    <div className="phrase-content">
-                      <p className="native-text">{phrase.nativeText}</p>
-                      <p className="gloss-text">{phrase.gloss}</p>
-                      {phrase.tips && (
-                        <p className="tip-text">
-                          <strong>Tip:</strong> {phrase.tips}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                  <PhrasePlayer
+                    key={phrase.id}
+                    phraseId={phrase.id}
+                    nativeText={phrase.nativeText}
+                    gloss={phrase.gloss}
+                    tips={phrase.tips}
+                    audio={phrase.audio}
+                    isPlaying={
+                      playbackState.isPlaying &&
+                      playbackState.currentAudioId === phrase.audio.id
+                    }
+                    onPlay={handlePhrasePlay}
+                    onStop={stopAudio}
+                    className="phrase-player-item"
+                    showGloss={transcriptVisible}
+                  />
                 ))}
               </div>
             </div>

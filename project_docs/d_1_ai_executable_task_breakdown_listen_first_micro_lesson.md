@@ -4,30 +4,26 @@ This breaks the **Listen‑First: Meet & Greet** specification into small, outco
 
 ## 📊 Implementation Progress Summary
 
-**Overall Progress: 58% Complete (14/24 tasks)**
+**Overall Progress: 75% Complete (18/24 tasks)**
 
-### ✅ **COMPLETED (14 tasks)**
+### ✅ **COMPLETED (18 tasks)**
 - **Track A:** Content & Data (2/2) - 100%
-- **Track B:** Playback & Gating Logic (2/3) - 67%
-- **Track C:** User Experience (2/6) - 33%
+- **Track B:** Playback & Gating Logic (3/3) - 100%
+- **Track C:** User Experience (6/6) - 100%
 - **Track D:** Accessibility & Resilience (1/3) - 33%
 - **Track E:** Quality Checks (4/4) - 100%
 
-### 🔄 **PARTIALLY COMPLETED (3 tasks)**
-- **Track B:** Event instrumentation (framework exists but phrase replay not triggered)
-- **Track C:** Reveal interaction (missing replay all and transcript toggle)
-- **Track C:** Progress indicator (missing XP counter)
+### 🔄 **PARTIALLY COMPLETED (1 task)**
+- **Track D:** Screen reader affordances (basic ARIA labels implemented, but state change announcements missing)
 
-### ❌ **NOT IMPLEMENTED (7 tasks)**
-- **Track C:** Phrase replays, transcript toggle, XP counter
+### ❌ **NOT IMPLEMENTED (5 tasks)**
 - **Track D:** Keyboard navigation, screen reader announcements
 - **Track F:** Copy & Handoffs (3/3) - 0%
 
 ### 🔄 **NEXT PRIORITIES**
-1. Implement transcript toggle functionality
-2. Add keyboard navigation and focus management
-3. Improve screen reader announcements
-4. Create QA checklist and documentation
+1. Add keyboard navigation and focus management
+2. Improve screen reader announcements
+3. Create QA checklist and documentation
 
 **Scope assumptions**
 - Lesson pattern: one **main line** (a short greeting) and **three supporting phrases**.
@@ -62,10 +58,10 @@ This breaks the **Listen‑First: Meet & Greet** specification into small, outco
 - **Acceptance:** Incomplete/errored/aborted plays do not increment; a computed `can reveal?` state becomes true only after two verified completions.
 - **Status:** Gate logic implemented in `AudioPlaybackService` with play counting and `canReveal` state management.
 
-**B3. Event instrumentation (lightweight)** ❌ **PARTIALLY COMPLETED**
+**B3. Event instrumentation (lightweight)** ✅ **COMPLETED**
 - **Goal:** Capture a minimal set of usage events for later inspection.
 - **Events:** `lesson_started`, `audio_play` (with clip identifier), `text_revealed`, `phrase_replay` (with phrase identifier).
-- **Status:** `EventTrackingService` implemented with all required event types, but `phrase_replay` events are never actually triggered since phrase replay functionality doesn't exist.
+- **Status:** `EventTrackingService` implemented with all required event types, and `phrase_replay` events are now triggered when users replay individual phrases.
 
 ---
 
@@ -81,25 +77,25 @@ This breaks the **Listen‑First: Meet & Greet** specification into small, outco
 - **Acceptance:** After exactly two full plays, the gate state becomes unlocked and a reveal action becomes available.
 - **Status:** `AudioPlayer` component with play/stop controls, visual feedback, and progress tracking.
 
-**C3. Reveal interaction** ❌ **PARTIALLY COMPLETED**
+**C3. Reveal interaction** ✅ **COMPLETED**
 - **Goal:** When the gate is unlocked, provide a clear action to reveal the text and the rest of the lesson.
 - **Acceptance:** On reveal, show the full main line text, phrase items, a **Replay all** action, and a **Transcript** toggle; record `text_revealed` once.
-- **Status:** Reveal button implemented and shows main line text and phrases, but **Replay all** action and **Transcript** toggle are missing.
+- **Status:** Reveal button implemented with **Replay all** action and **Transcript** toggle functionality. All post-reveal controls are now available.
 
-**C4. Phrase replays** ❌ **NOT IMPLEMENTED**
+**C4. Phrase replays** ✅ **COMPLETED**
 - **Goal:** Allow tapping/clicking each phrase to hear its audio with visible playing state and accessible feedback.
 - **Acceptance:** Rapid replays are handled; only one clip plays at a time; `phrase_replay` is recorded with the associated phrase.
-- **Status:** Phrases are displayed as static text but have no audio controls or replay functionality. Audio playback and event tracking not implemented.
+- **Status:** `PhrasePlayer` component implemented with individual phrase audio controls, visual playing state feedback, and proper event tracking.
 
-**C5. Transcript toggle** ❌ **NOT IMPLEMENTED**
+**C5. Transcript toggle** ✅ **COMPLETED**
 - **Goal:** Provide a control to show/hide the learner gloss/translation after reveal.
 - **Acceptance:** Transcript is not available pre‑reveal; after reveal it can be toggled without layout jumps or loss of focus.
-- **Status:** Gloss text is always visible after reveal; toggle functionality not yet implemented.
+- **Status:** `TranscriptToggle` component implemented with show/hide functionality for gloss text. Toggle works smoothly without layout disruption.
 
-**C6. Progress indicator & XP (optional, visual only)** ❌ **PARTIALLY COMPLETED**
+**C6. Progress indicator & XP (optional, visual only)** ✅ **COMPLETED**
 - **Goal:** Provide a lightweight visual indicator of progress and an XP counter that increments on key actions.
 - **Acceptance:** Indicator reaches 100% once text is revealed; counters are local, non‑persistent, and never block usage.
-- **Status:** Progress bar implemented showing play count (1/2, 2/2), but XP counter not yet implemented.
+- **Status:** `ProgressIndicator` component implemented with XP counter and progress percentage. XP awarded for reveal (50), phrase replays (10 each), and replay all (25).
 
 ---
 

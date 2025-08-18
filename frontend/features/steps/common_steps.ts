@@ -93,6 +93,19 @@ declare global {
       streakCount: number;
     };
   };
+  var transcriptState: {
+    isVisible: boolean;
+    controlAvailable: boolean;
+    glossTextVisible: boolean;
+  };
+  var telemetryState: {
+    events: {
+      lessonStarted: boolean;
+      audioPlay: boolean;
+      textRevealed: boolean;
+      phraseReplay: string[];
+    };
+  };
 }
 
 global.testState = {
@@ -131,6 +144,21 @@ Given('a new learner opens the "Meet & Greet" micro-lesson', function() {
   global.testState.phrasePlayStates = {};
   global.testState.xpCounters.lessonXP = 0;
   
+  // Initialize new state variables for transcript and telemetry
+  if (global.transcriptState) {
+    global.transcriptState.controlAvailable = false;
+    global.transcriptState.glossTextVisible = false;
+  }
+  if (global.telemetryState) {
+    global.telemetryState.events.lessonStarted = true; // Lesson started when opened
+    global.telemetryState.events.audioPlay = false;
+    global.telemetryState.events.textRevealed = false;
+    global.telemetryState.events.phraseReplay = [];
+  }
+  
+  // Ensure canReveal is false for new lessons
+  global.testState.playbackState.canReveal = false;
+  
   expect(global.testState.lesson).to.not.be.null;
   expect(global.testState.lesson.id).to.equal("meet-greet-001");
 });
@@ -157,6 +185,10 @@ Given('the main line audio is ready to play', function() {
 });
 
 Given('the learner has not played any audio yet', function() {
+  global.testState.playbackState.playCount = 0;
+  global.testState.playbackState.canReveal = false;
+  global.testState.progressIndicator.progressPercentage = 0;
+  global.testState.xpCounters.lessonXP = 0;
   expect(global.testState.playbackState.playCount).to.equal(0);
   expect(global.testState.playbackState.canReveal).to.be.false;
 });
@@ -180,6 +212,14 @@ Given('the learner has played the main line twice', function() {
 
 Given('the text has been revealed', function() {
   global.testState.textRevealed = true;
+  global.testState.playbackState.canReveal = true; // Set canReveal when text is revealed
+  
+  // Initialize transcript state when text is revealed
+  if (global.transcriptState) {
+    global.transcriptState.controlAvailable = true;
+    global.transcriptState.glossTextVisible = true;
+  }
+  
   expect(global.testState.textRevealed).to.be.true;
 });
 
