@@ -1,5 +1,5 @@
-const { Given, When, Then } = require('@cucumber/cucumber');
-const { expect } = require('chai');
+import { Given, When, Then } from '@cucumber/cucumber';
+import { expect } from 'chai';
 
 When('the learner plays the main audio once to completion', function() {
   // Simulate playing the main audio once

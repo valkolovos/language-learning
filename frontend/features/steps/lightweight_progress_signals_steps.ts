@@ -1,5 +1,5 @@
-const { Given, When, Then } = require('@cucumber/cucumber');
-const { expect } = require('chai');
+import { Given, When, Then } from '@cucumber/cucumber';
+import { expect } from 'chai';
 
 Given('the learner has not yet revealed the text', function() {
   // Verify text is not revealed

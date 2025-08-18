@@ -1,5 +1,5 @@
-const { Given, When, Then } = require('@cucumber/cucumber');
-const { expect } = require('chai');
+import { Given, When, Then } from '@cucumber/cucumber';
+import { expect } from 'chai';
 
 Given('the learner has revealed the text in the "Meet & Greet" micro-lesson', function() {
   // Simulate text reveal
@@ -40,7 +40,7 @@ Then('a clear playing state is shown for that phrase', function() {
   expect(global.testState.phrasePlayStates["phrase-1"]).to.be.true;
   
   // Verify the phrase data is correct
-  const phrase = global.testState.lesson.phrases.find(p => p.id === "phrase-1");
+  const phrase = global.testState.lesson.phrases.find((p: any) => p.id === "phrase-1");
   expect(phrase).to.not.be.undefined;
   expect(phrase.nativeText).to.equal("Γειά σου");
   expect(phrase.gloss).to.equal("Hello");
