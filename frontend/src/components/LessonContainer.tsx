@@ -18,6 +18,7 @@ import {
   createExtendedError,
   getUserFriendlyMessage,
 } from "../utils/errorUtils";
+import { MICROCOPY } from "../constants/microcopy";
 import log from "../services/logger";
 
 interface LessonContainerProps {
@@ -88,9 +89,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   useEffect(() => {
     if (playbackState.canReveal && !textRevealed) {
       // Announce that reveal is available and focus the reveal button
-      announceToScreenReader(
-        "Text is now available to reveal. Press Enter or Space to show the lesson text.",
-      );
+      announceToScreenReader(MICROCOPY.SCREEN_READER_REVEAL_AVAILABLE);
       // Small delay to ensure the reveal button is rendered
       setTimeout(() => focusRevealButton(), 100);
     }
@@ -104,9 +103,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   useEffect(() => {
     if (textRevealed) {
       // Announce that text is revealed and focus the first phrase button
-      announceToScreenReader(
-        "Lesson text revealed. You can now practice individual phrases. Use Tab to navigate between controls.",
-      );
+      announceToScreenReader(MICROCOPY.SCREEN_READER_TEXT_REVEALED);
       // Small delay to ensure phrase buttons are rendered
       setTimeout(() => focusFirstPhraseButton(), 100);
     }
@@ -115,9 +112,9 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   // Announce audio playback state changes
   useEffect(() => {
     if (playbackState.isPlaying) {
-      announceToScreenReader("Audio is now playing");
+      announceToScreenReader(MICROCOPY.SCREEN_READER_AUDIO_PLAYING);
     } else if (playbackState.currentAudioId) {
-      announceToScreenReader("Audio playback stopped");
+      announceToScreenReader(MICROCOPY.SCREEN_READER_AUDIO_STOPPED);
     }
   }, [
     playbackState.isPlaying,
@@ -142,9 +139,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
         eventTracking.current.trackLessonStarted(lessonId);
 
         // Announce lesson loaded
-        announceToScreenReader(
-          "Lesson loaded. Press Enter or Space on the Play button to start listening.",
-        );
+        announceToScreenReader(MICROCOPY.SCREEN_READER_LESSON_LOADED);
       } else {
         const errorMessage = result.error?.message || "Failed to load lesson";
         setError(
@@ -185,9 +180,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
       setXp((prev) => prev + 50);
 
       // Announce reveal action
-      announceToScreenReader(
-        "Text revealed! You can now see the lesson content and practice phrases.",
-      );
+      announceToScreenReader(MICROCOPY.SCREEN_READER_TEXT_REVEALED_ACTION);
     }
   };
 
@@ -196,7 +189,9 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     setTranscriptVisible((prev) => !prev);
     // Announce transcript state change
     announceToScreenReader(
-      transcriptVisible ? "Translations hidden" : "Translations shown",
+      transcriptVisible
+        ? MICROCOPY.SCREEN_READER_TRANSLATIONS_HIDDEN
+        : MICROCOPY.SCREEN_READER_TRANSLATIONS_SHOWN,
     );
   };
 
@@ -428,7 +423,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
         {/* Listen-First Section */}
         <div className="listen-first-section">
           <div className="listen-hint">
-            <h3>🎧 Listen First</h3>
+            <h3>{MICROCOPY.LISTEN_FIRST_HEADING}</h3>
             <p className="hint-text">
               {textRevealed
                 ? "Great job! You can now see the text and practice phrases."
@@ -467,7 +462,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
                 aria-label="Reveal lesson text"
                 aria-describedby="reveal-description"
               >
-                ✨ Show Text
+                {MICROCOPY.SHOW_TEXT}
               </button>
               <div id="reveal-description" className="sr-only">
                 Press Enter or Space to reveal the lesson text and practice
@@ -507,7 +502,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
                 aria-label="Replay all phrases"
                 aria-describedby="replay-all-description"
               >
-                🔄 Replay All
+                🔄 {MICROCOPY.REPLAY_ALL_BUTTON_LABEL}
               </button>
               <div id="replay-all-description" className="sr-only">
                 Press Enter or Space to replay all phrases in sequence
@@ -524,7 +519,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
 
             <div className="phrases-section">
               <h3>Practice Phrases</h3>
-              <p className="phrase-hint">Tap a phrase to hear it again</p>
+              <p className="phrase-hint">{MICROCOPY.PHRASE_REPLAY_HINT}</p>
               <div className="phrases-list">
                 {lesson.phrases.map((phrase, index) => (
                   <PhrasePlayer

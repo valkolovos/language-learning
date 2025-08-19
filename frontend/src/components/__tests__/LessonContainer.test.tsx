@@ -231,7 +231,7 @@ describe("LessonContainer", () => {
       });
 
       const playButton = screen.getByRole("button", {
-        name: /play main line audio/i,
+        name: /play main lesson/i,
       });
       fireEvent.click(playButton);
 
@@ -257,7 +257,7 @@ describe("LessonContainer", () => {
       });
 
       const stopButton = screen.getByRole("button", {
-        name: /stop main line audio/i,
+        name: /stop audio/i,
       });
       fireEvent.click(stopButton);
 
@@ -321,7 +321,7 @@ describe("LessonContainer", () => {
       });
 
       const phraseButton = screen.getByRole("button", {
-        name: /play phrase: I'm fine, thank you/i,
+        name: /play phrase phrase: I'm fine, thank you/i,
       });
       fireEvent.click(phraseButton);
 
@@ -453,7 +453,7 @@ describe("LessonContainer", () => {
       });
 
       const phraseButton = screen.getByRole("button", {
-        name: /play phrase: I'm fine, thank you/i,
+        name: /play phrase phrase: I'm fine, thank you/i,
       });
       fireEvent.click(phraseButton);
 

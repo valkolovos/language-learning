@@ -31,7 +31,7 @@ describe("AudioPlayer", () => {
     render(<AudioPlayer {...defaultProps} />);
 
     expect(
-      screen.getByRole("button", { name: /play main line audio/i }),
+      screen.getByRole("button", { name: /play main lesson/i }),
     ).toBeInTheDocument();
     expect(screen.getByText("Play")).toBeInTheDocument();
   });
@@ -40,7 +40,7 @@ describe("AudioPlayer", () => {
     render(<AudioPlayer {...defaultProps} isPlaying={true} />);
 
     expect(
-      screen.getByRole("button", { name: /stop main line audio/i }),
+      screen.getByRole("button", { name: /stop audio/i }),
     ).toBeInTheDocument();
     expect(screen.getByText("Stop")).toBeInTheDocument();
   });
@@ -76,9 +76,7 @@ describe("AudioPlayer", () => {
     const onPlay = jest.fn();
     render(<AudioPlayer {...defaultProps} onPlay={onPlay} />);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /play main line audio/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /play main lesson/i }));
 
     expect(onPlay).toHaveBeenCalledWith(mockAudioClip);
   });
@@ -87,9 +85,7 @@ describe("AudioPlayer", () => {
     const onStop = jest.fn();
     render(<AudioPlayer {...defaultProps} isPlaying={true} onStop={onStop} />);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /stop main line audio/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /stop audio/i }));
 
     expect(onStop).toHaveBeenCalled();
   });

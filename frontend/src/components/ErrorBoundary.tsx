@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { isExtendedError, getUserFriendlyMessage } from "../utils/errorUtils";
+import { MICROCOPY } from "../constants/microcopy";
 
 interface Props {
   children: ReactNode;
@@ -91,7 +92,7 @@ export class ErrorBoundary extends Component<Props, State> {
               }
               className="retry-button"
             >
-              Try again
+              {MICROCOPY.TRY_AGAIN}
             </button>
           </div>
         </div>

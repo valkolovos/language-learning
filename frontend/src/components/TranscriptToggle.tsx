@@ -1,4 +1,5 @@
 import React, { forwardRef } from "react";
+import { MICROCOPY } from "../constants/microcopy";
 
 interface TranscriptToggleProps {
   isVisible: boolean;
@@ -23,7 +24,9 @@ export const TranscriptToggle = forwardRef<
         aria-describedby="transcript-toggle-description"
       >
         <span aria-hidden="true">{isVisible ? "👁️" : "👁️‍🗨️"}</span>
-        {isVisible ? "Hide All Translations" : "Show All Translations"}
+        {isVisible
+          ? MICROCOPY.TRANSCRIPT_TOGGLE_HIDE
+          : MICROCOPY.TRANSCRIPT_TOGGLE_SHOW}
       </button>
       <div id="transcript-toggle-description" className="sr-only">
         Press Enter or Space to toggle translation visibility

@@ -1,4 +1,5 @@
 import React, { forwardRef } from "react";
+import { MICROCOPY } from "../constants/microcopy";
 
 interface ProgressIndicatorProps {
   xp: number;
@@ -64,7 +65,7 @@ export const ProgressIndicator = forwardRef<
 
         {showBreakdown && (
           <div className="xp-breakdown">
-            <h4>XP Breakdown</h4>
+            <h4>{MICROCOPY.XP_BREAKDOWN_TITLE}</h4>
             <div className="xp-breakdown-list">
               <div className="xp-item">
                 <span className="xp-action">Reveal text</span>

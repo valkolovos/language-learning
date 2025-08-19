@@ -1,5 +1,6 @@
 import React, { forwardRef } from "react";
 import { AudioClip } from "../types/lesson";
+import { MICROCOPY } from "../constants/microcopy";
 
 interface AudioPlayerProps {
   audioClip: AudioClip;
@@ -55,7 +56,7 @@ export const AudioPlayer = forwardRef<HTMLButtonElement, AudioPlayerProps>(
       if (isPlaying) return "Playing...";
       if (canReveal) return "Ready to reveal text!";
       if (playCount > 0) return `Played ${playCount}/2 times`;
-      return "Listen first to unlock text";
+      return MICROCOPY.LISTEN_FIRST_TO_UNLOCK;
     };
 
     return (
@@ -66,7 +67,7 @@ export const AudioPlayer = forwardRef<HTMLButtonElement, AudioPlayerProps>(
             className={getPlayButtonClass()}
             onClick={handlePlayClick}
             onKeyDown={onKeyDown}
-            aria-label={`${isPlaying ? "Stop" : "Play"} main line audio`}
+            aria-label={`${isPlaying ? MICROCOPY.STOP_BUTTON_LABEL : MICROCOPY.PLAY_BUTTON_LABEL}`}
             aria-describedby="main-line-status"
           >
             <span aria-hidden="true">{isPlaying ? "⏹️" : "▶️"}</span>{" "}

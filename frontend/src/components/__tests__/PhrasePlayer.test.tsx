@@ -68,7 +68,9 @@ describe("PhrasePlayer", () => {
   it("shows play button when not playing", () => {
     render(<PhrasePlayer {...defaultProps} isPlaying={false} />);
 
-    const button = screen.getByRole("button", { name: /play phrase: hello/i });
+    const button = screen.getByRole("button", {
+      name: /play phrase phrase: hello/i,
+    });
     expect(button).toBeInTheDocument();
     expect(button).toHaveTextContent("Play");
     expect(button).toHaveTextContent("▶️");
@@ -77,7 +79,9 @@ describe("PhrasePlayer", () => {
   it("shows stop button when playing", () => {
     render(<PhrasePlayer {...defaultProps} isPlaying={true} />);
 
-    const button = screen.getByRole("button", { name: /stop phrase: hello/i });
+    const button = screen.getByRole("button", {
+      name: /stop audio phrase: hello/i,
+    });
     expect(button).toBeInTheDocument();
     expect(button).toHaveTextContent("Stop");
     expect(button).toHaveTextContent("⏹️");
@@ -87,7 +91,7 @@ describe("PhrasePlayer", () => {
     render(<PhrasePlayer {...defaultProps} isPlaying={false} />);
 
     const playButton = screen.getByRole("button", {
-      name: /play phrase: hello/i,
+      name: /play phrase phrase: hello/i,
     });
     fireEvent.click(playButton);
 
@@ -100,7 +104,7 @@ describe("PhrasePlayer", () => {
     render(<PhrasePlayer {...defaultProps} isPlaying={true} />);
 
     const stopButton = screen.getByRole("button", {
-      name: /stop phrase: hello/i,
+      name: /stop audio phrase: hello/i,
     });
     fireEvent.click(stopButton);
 
@@ -149,7 +153,7 @@ describe("PhrasePlayer", () => {
     render(<PhrasePlayer {...defaultProps} />);
 
     const button = screen.getByRole("button");
-    expect(button).toHaveAttribute("aria-label", "Play phrase: Hello");
+    expect(button).toHaveAttribute("aria-label", "Play phrase phrase: Hello");
     expect(button).toHaveAttribute(
       "aria-describedby",
       "phrase-phrase-1-status",
@@ -165,7 +169,7 @@ describe("PhrasePlayer", () => {
     render(<PhrasePlayer {...defaultProps} audio={mockPreRecordedAudio} />);
 
     const playButton = screen.getByRole("button", {
-      name: /play phrase: hello/i,
+      name: /play phrase phrase: hello/i,
     });
     fireEvent.click(playButton);
 
@@ -180,7 +184,10 @@ describe("PhrasePlayer", () => {
     expect(screen.getByText(longText)).toBeInTheDocument();
 
     const button = screen.getByRole("button");
-    expect(button).toHaveAttribute("aria-label", `Play phrase: ${longText}`);
+    expect(button).toHaveAttribute(
+      "aria-label",
+      `Play phrase phrase: ${longText}`,
+    );
   });
 
   it("handles special characters in phrase text", () => {
@@ -219,7 +226,7 @@ describe("PhrasePlayer", () => {
       render(<PhrasePlayer {...defaultProps} nativeText="" gloss="" />);
 
       const button = screen.getByRole("button");
-      expect(button).toHaveAttribute("aria-label", "Play phrase: ");
+      expect(button).toHaveAttribute("aria-label", "Play phrase phrase: ");
     });
 
     it("handles undefined tips gracefully", () => {

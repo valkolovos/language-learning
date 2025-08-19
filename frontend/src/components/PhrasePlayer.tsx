@@ -1,5 +1,6 @@
 import React, { forwardRef } from "react";
 import { AudioClip } from "../types/lesson";
+import { MICROCOPY } from "../constants/microcopy";
 
 interface PhrasePlayerProps {
   phraseId: string;
@@ -41,8 +42,8 @@ export const PhrasePlayer = forwardRef<HTMLButtonElement, PhrasePlayerProps>(
     };
 
     const getPlayButtonText = () => {
-      if (isPlaying) return "Stop";
-      return "Play";
+      if (isPlaying) return MICROCOPY.STOP_BUTTON_LABEL;
+      return MICROCOPY.PHRASE_PLAY_BUTTON;
     };
 
     const getPlayButtonClass = () => {
@@ -70,7 +71,7 @@ export const PhrasePlayer = forwardRef<HTMLButtonElement, PhrasePlayerProps>(
               className={getPlayButtonClass()}
               onClick={handlePlayClick}
               onKeyDown={onKeyDown}
-              aria-label={`${isPlaying ? "Stop" : "Play"} phrase: ${nativeText}`}
+              aria-label={`${isPlaying ? MICROCOPY.STOP_BUTTON_LABEL : MICROCOPY.PHRASE_PLAY_BUTTON} phrase: ${nativeText}`}
               aria-describedby={`phrase-${phraseId}-status`}
             >
               <span aria-hidden="true">{isPlaying ? "⏹️" : "▶️"}</span>

@@ -53,7 +53,7 @@ describe("ErrorBoundary", () => {
 
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     expect(screen.getByText("Test error")).toBeInTheDocument();
-    expect(screen.getByText("Try again")).toBeInTheDocument();
+    expect(screen.getByText("Try Again")).toBeInTheDocument();
   });
 
   it("renders ExtendedError UI with user-friendly message", () => {
@@ -104,7 +104,7 @@ describe("ErrorBoundary", () => {
     );
 
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-    expect(screen.getByText("Try again")).toBeInTheDocument();
+    expect(screen.getByText("Try Again")).toBeInTheDocument();
   });
 
   it("renders custom fallback when provided", () => {
