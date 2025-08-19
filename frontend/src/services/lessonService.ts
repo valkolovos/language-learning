@@ -1,6 +1,7 @@
 import { Lesson, LessonLoadResult, PartialLesson } from "../types/lesson";
 import { SAMPLE_LESSON, AVAILABLE_LESSON_IDS } from "../data/sampleLessons";
 import logger from "./logger";
+import { createErrorDetails } from "../utils/errorUtils";
 
 export class LessonService {
   /**
@@ -32,18 +33,12 @@ export class LessonService {
         },
       };
     } catch (error) {
-      // Convert error to a safe format for details
-      const errorDetails =
-        error instanceof Error
-          ? { message: error.message, name: error.name, stack: error.stack }
-          : { value: String(error) };
-
       return {
         success: false,
         error: {
           type: "unknown",
           message: "Failed to load lesson due to unexpected error",
-          details: errorDetails,
+          details: createErrorDetails(error),
         },
       };
     }
@@ -168,18 +163,12 @@ export class LessonService {
         lesson: lesson as Lesson,
       };
     } catch (error) {
-      // Convert error to a safe format for details
-      const errorDetails =
-        error instanceof Error
-          ? { message: error.message, name: error.name, stack: error.stack }
-          : { value: String(error) };
-
       return {
         success: false,
         error: {
           type: "parse_error",
           message: "Failed to parse lesson content",
-          details: errorDetails,
+          details: createErrorDetails(error),
         },
       };
     }

@@ -242,6 +242,18 @@ export class AudioPlaybackService {
   }
 
   private emitEvent(event: AudioPlaybackEvent): void {
-    this.eventListeners.forEach((listener) => listener(event));
+    for (const listener of this.eventListeners) {
+      try {
+        listener(event);
+      } catch (error) {
+        // Log error but continue processing other listeners
+        console.error("Event listener error:", error);
+        // Optionally, you could remove the failing listener here
+        // const index = this.eventListeners.indexOf(listener);
+        // if (index > -1) {
+        //   this.eventListeners.splice(index, 1);
+        // }
+      }
+    }
   }
 }

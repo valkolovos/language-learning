@@ -43,6 +43,7 @@ export class EventTrackingService {
   private static instance: EventTrackingService;
   private events: TrackedEvent[] = [];
   private maxEvents: number = 100; // Keep last 100 events in memory
+  private pruneThreshold: number = 120; // Start pruning when we exceed this threshold
 
   private constructor() {}
 
@@ -143,12 +144,23 @@ export class EventTrackingService {
   private addEvent(event: TrackedEvent): void {
     this.events.push(event);
 
-    // Keep only the last maxEvents
+    // Prune events when we exceed maxEvents
     if (this.events.length > this.maxEvents) {
-      this.events = this.events.slice(-this.maxEvents);
+      this.pruneEvents();
     }
 
     // Log event
     log.debug("Event tracked:", event);
+  }
+
+  /**
+   * Efficiently prune events by removing excess events in batches
+   */
+  private pruneEvents(): void {
+    const excessCount = this.events.length - this.maxEvents;
+    if (excessCount > 0) {
+      // Remove excess events from the beginning of the array
+      this.events.splice(0, excessCount);
+    }
   }
 }

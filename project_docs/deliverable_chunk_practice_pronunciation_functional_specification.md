@@ -3,7 +3,10 @@
 **Type:** Functional Specification (implementation‑agnostic)
 
 ## Purpose
-Add a focused **pronunciation practice loop** that fits after the Listen‑First reveal in a micro‑lesson. The learner records a short **chunk** (1–4 words, ~1–3 seconds), receives **simple, actionable feedback** (Clear / Almost / Try again + 1 micro‑tip), and can replay/retake quickly. The slice must ship **local-first** (supporting local development and testing with mocks) with an optional cloud scoring flag that can be toggled per environment.
+Add a focused **pronunciation practice loop** that fits after the Listen‑First reveal in a micro‑lesson. The learner records a short **chunk** (1–4 words, ~1–3 seconds), receives **simple, actionable feedback** (Clear / Almost / Try again + 1 micro‑tip), and can replay/retake quickly. The slice must ship **local-first** with an optional cloud scoring flag that can be toggled per environment.
+
+## Local-First Architecture
+**Local-first** means the system can be fully developed, tested, and run locally using mocks for third-party services. While it may utilize cloud services when available, it gracefully degrades to local processing when they're unavailable. This enables developers to work offline and test without external dependencies.
 
 ## Definition of Done (DoD)
 A new learner can complete at least one pronunciation attempt for a target chunk and see feedback without confusion or setup beyond granting microphone access. All core flows are keyboard/screen‑reader accessible. The system can be developed and tested locally with mocks, and gracefully degrades when third-party services are unavailable.
@@ -13,7 +16,7 @@ A new learner can complete at least one pronunciation attempt for a target chunk
 ## In Scope
 - **Single‑chunk practice** within an existing lesson (post‑reveal)
 - **Mic capture** and **attempt lifecycle** (idle → recording → processing → feedback)
-- **Local-first scoring** using intelligibility proxies (see *Scoring Model*) - supports local development with mocks
+- **Local-first scoring** using intelligibility proxies (see *Scoring Model*)
 - **Optional managed scoring** behind a feature flag (environment toggle)
 - **Feedback UI:** state (Clear / Almost / Try again), one micro‑tip, and per‑word highlighting when available
 - **Controls:** Record, Stop, Play back attempt, Retake, Next
@@ -43,7 +46,7 @@ A new learner can complete at least one pronunciation attempt for a target chunk
 5. **Playback**: The user can play their last attempt and the model reference audio.
 6. **Retry**: Retake replaces the last attempt and recomputes feedback.
 7. **A11y**: Status changes announce via ARIA live region; all controls tabbable with visible focus.
-8. **Local-first**: With feature flag **off**, all feedback derives from on‑device processing; no network calls are required to complete the loop. The system can be fully developed and tested locally using mocks.
+8. **Local-first**: With feature flag **off**, all feedback derives from on‑device processing; no network calls are required to complete the loop.
 9. **Telemetry (local or deferred)**: The app records attempt result (Clear/Almost/TryAgain), duration, and whether user proceeded.
 
 ---
@@ -51,7 +54,7 @@ A new learner can complete at least one pronunciation attempt for a target chunk
 ## Scoring Model (implementation‑agnostic)
 The system computes **intelligibility** using a reference chunk and the user’s audio. Two interchangeable backends:
 
-- **Local-first backend** (default): on‑device speech recognition in the browser (WASM) to obtain a best‑effort transcript and word timings; simple acoustic cues (duration, energy) for stressed syllables; VAD to trim silences. Can be mocked for local development and testing.
+- **Local-first backend** (default): on‑device speech recognition in the browser (WASM) to obtain a best‑effort transcript and word timings; simple acoustic cues (duration, energy) for stressed syllables; VAD to trim silences.
 - **Managed backend** (feature‑flagged): cloud scoring API returning word/phoneme accuracy, fluency/timing, and completeness. The UI and thresholds remain the same regardless of backend.
 
 **Derived metrics (conceptual definitions):**
@@ -106,7 +109,6 @@ Capture the following **event fields** for analytics (local buffer; upload optio
 
 ## Non‑Functional & Privacy
 - **Local-first** operation is mandatory - the system must support local development and testing with mocks. Managed scoring is optional.
-- **Local-first definition**: The system can be fully developed, tested, and run locally using mocks for third-party services. While it may utilize cloud services when available, it gracefully degrades to local processing when they're unavailable. This enables developers to work offline and test without external dependencies.
 - **Privacy statement** (visible near Record): "Audio stays on your device for this practice. Nothing is saved or sent unless you opt in."
 - No PII collected; attempts are ephemeral.
 
