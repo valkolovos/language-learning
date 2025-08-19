@@ -42,6 +42,89 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   const { playbackState, playAudio, stopAudio, resetPlayback } =
     useAudioPlayback();
 
+  // Focus management refs
+  const mainPlayButtonRef = useRef<HTMLButtonElement>(null);
+  const revealButtonRef = useRef<HTMLButtonElement>(null);
+  const replayAllButtonRef = useRef<HTMLButtonElement>(null);
+  const transcriptToggleRef = useRef<HTMLButtonElement>(null);
+  const firstPhraseButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Screen reader announcements
+  const [announcement, setAnnouncement] = useState("");
+
+  // Announce to screen readers
+  const announceToScreenReader = useCallback((message: string) => {
+    setAnnouncement(message);
+    // Clear announcement after a short delay to allow screen reader to process
+    setTimeout(() => setAnnouncement(""), 100);
+  }, []);
+
+  // Handle keyboard navigation
+  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
+    switch (event.key) {
+      case "Enter":
+      case " ":
+        event.preventDefault();
+        if (event.target instanceof HTMLButtonElement) {
+          event.target.click();
+        }
+        break;
+      case "Tab":
+        // Ensure logical tab order is maintained
+        break;
+    }
+  }, []);
+
+  // Focus management functions
+  const focusRevealButton = useCallback(() => {
+    revealButtonRef.current?.focus();
+  }, []);
+
+  const focusFirstPhraseButton = useCallback(() => {
+    firstPhraseButtonRef.current?.focus();
+  }, []);
+
+  // Focus management when state changes
+  useEffect(() => {
+    if (playbackState.canReveal && !textRevealed) {
+      // Announce that reveal is available and focus the reveal button
+      announceToScreenReader(
+        "Text is now available to reveal. Press Enter or Space to show the lesson text.",
+      );
+      // Small delay to ensure the reveal button is rendered
+      setTimeout(() => focusRevealButton(), 100);
+    }
+  }, [
+    playbackState.canReveal,
+    textRevealed,
+    announceToScreenReader,
+    focusRevealButton,
+  ]);
+
+  useEffect(() => {
+    if (textRevealed) {
+      // Announce that text is revealed and focus the first phrase button
+      announceToScreenReader(
+        "Lesson text revealed. You can now practice individual phrases. Use Tab to navigate between controls.",
+      );
+      // Small delay to ensure phrase buttons are rendered
+      setTimeout(() => focusFirstPhraseButton(), 100);
+    }
+  }, [textRevealed, announceToScreenReader, focusFirstPhraseButton]);
+
+  // Announce audio playback state changes
+  useEffect(() => {
+    if (playbackState.isPlaying) {
+      announceToScreenReader("Audio is now playing");
+    } else if (playbackState.currentAudioId) {
+      announceToScreenReader("Audio playback stopped");
+    }
+  }, [
+    playbackState.isPlaying,
+    playbackState.currentAudioId,
+    announceToScreenReader,
+  ]);
+
   const loadLesson = useCallback(async () => {
     try {
       setLoading(true);
@@ -57,6 +140,11 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
 
         // Track lesson started event
         eventTracking.current.trackLessonStarted(lessonId);
+
+        // Announce lesson loaded
+        announceToScreenReader(
+          "Lesson loaded. Press Enter or Space on the Play button to start listening.",
+        );
       } else {
         const errorMessage = result.error?.message || "Failed to load lesson";
         setError(
@@ -81,7 +169,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [lessonId, resetPlayback]);
+  }, [lessonId, resetPlayback, announceToScreenReader]);
 
   useEffect(() => {
     loadLesson();
@@ -95,17 +183,30 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
       eventTracking.current.trackTextRevealed(lessonId);
       // Award XP for revealing text
       setXp((prev) => prev + 50);
+
+      // Announce reveal action
+      announceToScreenReader(
+        "Text revealed! You can now see the lesson content and practice phrases.",
+      );
     }
   };
 
   // Handle transcript toggle
   const handleTranscriptToggle = () => {
     setTranscriptVisible((prev) => !prev);
+    // Announce transcript state change
+    announceToScreenReader(
+      transcriptVisible ? "Translations hidden" : "Translations shown",
+    );
   };
 
   // Handle XP breakdown toggle
   const handleXpBreakdownToggle = () => {
     setShowXpBreakdown((prev) => !prev);
+    // Announce XP breakdown state change
+    announceToScreenReader(
+      showXpBreakdown ? "XP breakdown hidden" : "XP breakdown shown",
+    );
   };
 
   // Handle phrase replay
@@ -115,6 +216,9 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     eventTracking.current.trackPhraseReplay(audioClip.id, lessonId);
     // Award XP for phrase replay
     setXp((prev) => prev + 10);
+
+    // Announce phrase playback
+    announceToScreenReader(`Playing phrase: ${audioClip.id}`);
   };
 
   // Handle replay all phrases
@@ -132,6 +236,9 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
 
         // Award XP for replay all action
         setXp((prev) => prev + 25);
+
+        // Announce replay all action
+        announceToScreenReader("Replaying all phrases in sequence");
       } catch (error) {
         log.error("Error during replay all:", error);
       }
@@ -177,11 +284,16 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     playAudio(audioClip);
     // Track audio play event
     eventTracking.current.trackAudioPlay(audioClip.id, lessonId);
+
+    // Announce main line playback
+    announceToScreenReader("Playing main line audio");
   };
 
   // Handle main line audio stop
   const handleMainLineStop = () => {
     stopAudio();
+    // Announce main line stopped
+    announceToScreenReader("Main line audio stopped");
   };
 
   if (loading) {
@@ -248,6 +360,16 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
 
   return (
     <div className="lesson-container">
+      {/* Screen reader announcements */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        aria-label="Screen reader announcements"
+      >
+        {announcement}
+      </div>
+
       <div className="lesson-header">
         <h2>{lesson.title}</h2>
         {lesson.metadata && (
@@ -287,6 +409,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
           <div className="main-line-audio">
             <h4>Main Line</h4>
             <AudioPlayer
+              ref={mainPlayButtonRef}
               audioClip={lesson.mainLine.audio}
               isPlaying={
                 playbackState.isPlaying &&
@@ -298,6 +421,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
               canReveal={playbackState.canReveal}
               error={playbackState.error}
               className="main-line-player"
+              onKeyDown={handleKeyDown}
             />
           </div>
 
@@ -305,12 +429,19 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
           {playbackState.canReveal && !textRevealed && (
             <div className="reveal-section">
               <button
+                ref={revealButtonRef}
                 className="reveal-button"
                 onClick={handleRevealText}
+                onKeyDown={handleKeyDown}
                 aria-label="Reveal lesson text"
+                aria-describedby="reveal-description"
               >
                 ✨ Show Text
               </button>
+              <div id="reveal-description" className="sr-only">
+                Press Enter or Space to reveal the lesson text and practice
+                phrases
+              </div>
             </div>
           )}
         </div>
@@ -338,17 +469,25 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
             {/* Post-reveal controls */}
             <div className="post-reveal-controls">
               <button
+                ref={replayAllButtonRef}
                 className="replay-all-button"
                 onClick={handleReplayAll}
+                onKeyDown={handleKeyDown}
                 aria-label="Replay all phrases"
+                aria-describedby="replay-all-description"
               >
                 🔄 Replay All
               </button>
+              <div id="replay-all-description" className="sr-only">
+                Press Enter or Space to replay all phrases in sequence
+              </div>
 
               <TranscriptToggle
+                ref={transcriptToggleRef}
                 isVisible={transcriptVisible}
                 onToggle={handleTranscriptToggle}
                 className="transcript-toggle-control"
+                onKeyDown={handleKeyDown}
               />
             </div>
 
@@ -359,6 +498,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
                 {lesson.phrases.map((phrase, index) => (
                   <PhrasePlayer
                     key={phrase.id}
+                    ref={index === 0 ? firstPhraseButtonRef : undefined}
                     phraseId={phrase.id}
                     nativeText={phrase.nativeText}
                     gloss={phrase.gloss}
@@ -372,6 +512,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
                     onStop={stopAudio}
                     className="phrase-player-item"
                     showGloss={transcriptVisible}
+                    onKeyDown={handleKeyDown}
                   />
                 ))}
               </div>

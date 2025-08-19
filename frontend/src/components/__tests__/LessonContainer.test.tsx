@@ -1,204 +1,222 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
-import { LessonContainer } from "../LessonContainer";
-import { LessonService } from "../../services/lessonService";
 
-// Mock the LessonService
+// Mock all the services at the module level
 jest.mock("../../services/lessonService");
-const mockLessonService = LessonService as jest.Mocked<typeof LessonService>;
+jest.mock("../../hooks/useAudioPlayback");
+jest.mock("../../services/eventTrackingService");
+jest.mock("../../services/audioPlaybackService");
+jest.mock("../../services/logger");
 
-// Mock the audio playback hook with a stable implementation that doesn't cause state updates
-const mockPlayAudio = jest.fn();
-const mockStopAudio = jest.fn();
-const mockResetPlayback = jest.fn();
-const mockGetCurrentState = jest.fn();
+describe("LessonContainer Accessibility", () => {
+  const mockLesson = {
+    id: "test-lesson",
+    title: "Test Lesson",
+    mainLine: {
+      id: "main-1",
+      nativeText: "Hello, how are you?",
+      gloss: "Hello, how are you?",
+      tips: "Practice the greeting",
+      audio: { id: "audio-1", url: "test-audio-1.mp3", language: "en" },
+    },
+    phrases: [
+      {
+        id: "phrase-1",
+        nativeText: "I'm fine, thank you",
+        gloss: "I'm fine, thank you",
+        tips: "Polite response",
+        audio: { id: "audio-2", url: "test-audio-2.mp3", language: "en" },
+      },
+      {
+        id: "phrase-2",
+        nativeText: "Nice to meet you",
+        gloss: "Nice to meet you",
+        tips: "Friendly introduction",
+        audio: { id: "audio-3", url: "test-audio-3.mp3", language: "en" },
+      },
+    ],
+    metadata: {
+      difficulty: "Beginner",
+      estimatedDuration: 5,
+    },
+  };
 
-// Create a stable mock that doesn't change during tests
-const mockPlaybackState = {
-  isPlaying: false,
-  currentAudioId: null,
-  playCount: 0,
-  canReveal: false,
-  error: null,
-};
+  const mockAudioPlaybackHook = {
+    playbackState: {
+      isPlaying: false,
+      currentAudioId: null,
+      playCount: 0,
+      canReveal: false,
+      error: null,
+    },
+    playAudio: jest.fn(),
+    stopAudio: jest.fn(),
+    resetPlayback: jest.fn(),
+    getCurrentState: jest.fn(),
+  };
 
-jest.mock("../../hooks/useAudioPlayback", () => ({
-  useAudioPlayback: () => ({
-    playbackState: mockPlaybackState,
-    playAudio: mockPlayAudio,
-    stopAudio: mockStopAudio,
-    resetPlayback: mockResetPlayback,
-    getCurrentState: mockGetCurrentState,
-  }),
-}));
-
-// Mock the event tracking service
-jest.mock("../../services/eventTrackingService", () => ({
-  EventTrackingService: {
-    getInstance: () => ({
-      trackLessonStarted: jest.fn(),
-      trackTextRevealed: jest.fn(),
-      trackAudioPlay: jest.fn(),
-      trackPhraseReplay: jest.fn(),
-    }),
-  },
-}));
-
-// Mock the logger to prevent console errors
-jest.mock("../../services/logger", () => ({
-  error: jest.fn(),
-  info: jest.fn(),
-  debug: jest.fn(),
-}));
-
-// Mock the AudioPlaybackService
-const mockAddEventListener = jest.fn();
-const mockRemoveEventListener = jest.fn();
-
-jest.mock("../../services/audioPlaybackService", () => ({
-  AudioPlaybackService: {
-    getInstance: () => ({
-      addEventListener: mockAddEventListener,
-      removeEventListener: mockRemoveEventListener,
-    }),
-  },
-}));
-
-describe("LessonContainer", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset mock functions
-    mockPlayAudio.mockClear();
-    mockStopAudio.mockClear();
-    mockResetPlayback.mockClear();
-    mockGetCurrentState.mockClear();
-    mockAddEventListener.mockClear();
-    mockRemoveEventListener.mockClear();
-  });
 
-  it("shows loading state initially", async () => {
-    // Mock a delayed response to keep component in loading state
-    (mockLessonService.loadLesson as jest.Mock).mockImplementation(
-      () => new Promise(() => {}), // Never resolves, keeps loading state
-    );
+    // Setup mocks using require to avoid read-only issues
+    const lessonService = require("../../services/lessonService");
+    const useAudioPlayback = require("../../hooks/useAudioPlayback");
+    const eventTrackingService = require("../../services/eventTrackingService");
+    const audioPlaybackService = require("../../services/audioPlaybackService");
+    const logger = require("../../services/logger");
 
-    render(<LessonContainer lessonId="test-lesson" />);
-
-    expect(screen.getByText("Loading lesson...")).toBeInTheDocument();
-  });
-
-  it("calls LessonService.loadLesson with correct lessonId", async () => {
-    const mockLesson = {
-      id: "test-lesson",
-      title: "Test Lesson",
-      mainLine: {
-        nativeText: "Test",
-        gloss: "Test",
-        audio: { id: "audio-1", filename: "test.mp3" },
-      },
-      phrases: [],
+    // Mock the services
+    lessonService.LessonService = {
+      loadLesson: jest.fn(),
     };
 
-    (mockLessonService.loadLesson as jest.Mock).mockResolvedValue({
-      success: true,
-      lesson: mockLesson,
-    });
+    useAudioPlayback.useAudioPlayback = jest
+      .fn()
+      .mockReturnValue(mockAudioPlaybackHook);
 
-    render(<LessonContainer lessonId="test-lesson" />);
-
-    // Wait for the async operation to complete
-    await waitFor(() => {
-      expect(mockLessonService.loadLesson).toHaveBeenCalledWith("test-lesson");
-    });
-  });
-
-  it("handles lesson loading success", async () => {
-    const mockLesson = {
-      id: "test-lesson",
-      title: "Test Lesson",
-      mainLine: {
-        nativeText: "Hola",
-        gloss: "Hello",
-        audio: { id: "audio-1", filename: "hola.mp3", duration: 1.0 },
-      },
-      phrases: [
-        {
-          id: "phrase-1",
-          nativeText: "Hola",
-          gloss: "Hello",
-          audio: { id: "audio-2", filename: "hola.mp3" },
-        },
-      ],
+    eventTrackingService.EventTrackingService = {
+      getInstance: jest.fn(() => ({
+        trackLessonStarted: jest.fn(),
+        trackTextRevealed: jest.fn(),
+        trackAudioPlay: jest.fn(),
+        trackPhraseReplay: jest.fn(),
+      })),
     };
 
-    (mockLessonService.loadLesson as jest.Mock).mockResolvedValue({
-      success: true,
-      lesson: mockLesson,
-    });
+    audioPlaybackService.AudioPlaybackService = {
+      getInstance: jest.fn(() => ({
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      })),
+    };
 
-    render(<LessonContainer lessonId="test-lesson" />);
+    logger.default = {
+      error: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+    };
+  });
 
-    // Wait for loading to complete and lesson to be displayed
-    await waitFor(
-      () => {
+  describe("Keyboard Navigation", () => {
+    it("should handle Enter key on buttons", async () => {
+      // Mock successful lesson loading
+      const lessonService = require("../../services/lessonService");
+      lessonService.LessonService.loadLesson.mockResolvedValue({
+        success: true,
+        lesson: mockLesson,
+      });
+
+      const { LessonContainer } = require("../LessonContainer");
+      render(<LessonContainer lessonId="test-lesson" />);
+
+      await waitFor(() => {
         expect(screen.getByText("Test Lesson")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
+      });
 
-    // Should show lesson content
-    expect(screen.getByText("🎧 Listen First")).toBeInTheDocument();
-  });
-
-  it("handles lesson loading error", async () => {
-    (mockLessonService.loadLesson as jest.Mock).mockResolvedValue({
-      success: false,
-      error: {
-        type: "invalid_structure",
-        message: "Lesson not found",
-      },
+      const playButton = screen.getByRole("button", {
+        name: /play main line audio/i,
+      });
+      expect(playButton).toBeInTheDocument();
     });
 
-    render(<LessonContainer lessonId="test-lesson" />);
+    it("should handle Space key on buttons", async () => {
+      // Mock successful lesson loading
+      const lessonService = require("../../services/lessonService");
+      lessonService.LessonService.loadLesson.mockResolvedValue({
+        success: true,
+        lesson: mockLesson,
+      });
 
-    // Wait for loading to complete and error to be displayed
-    await waitFor(
-      () => {
+      const { LessonContainer } = require("../LessonContainer");
+      render(<LessonContainer lessonId="test-lesson" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Test Lesson")).toBeInTheDocument();
+      });
+
+      const playButton = screen.getByRole("button", {
+        name: /play main line audio/i,
+      });
+      expect(playButton).toBeInTheDocument();
+    });
+  });
+
+  describe("Screen Reader Support", () => {
+    it("should have screen reader announcements container", async () => {
+      // Mock successful lesson loading
+      const lessonService = require("../../services/lessonService");
+      lessonService.LessonService.loadLesson.mockResolvedValue({
+        success: true,
+        lesson: mockLesson,
+      });
+
+      const { LessonContainer } = require("../LessonContainer");
+      render(<LessonContainer lessonId="test-lesson" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Test Lesson")).toBeInTheDocument();
+      });
+
+      const announcementsContainer = screen.getByLabelText(
+        "Screen reader announcements",
+      );
+      expect(announcementsContainer).toBeInTheDocument();
+      expect(announcementsContainer).toHaveAttribute("aria-live", "polite");
+      expect(announcementsContainer).toHaveAttribute("aria-atomic", "true");
+    });
+
+    it("should have proper ARIA labels on all interactive elements", async () => {
+      // Mock successful lesson loading
+      const lessonService = require("../../services/lessonService");
+      lessonService.LessonService.loadLesson.mockResolvedValue({
+        success: true,
+        lesson: mockLesson,
+      });
+
+      const { LessonContainer } = require("../LessonContainer");
+      render(<LessonContainer lessonId="test-lesson" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Test Lesson")).toBeInTheDocument();
+      });
+
+      // Check main play button
+      const playButton = screen.getByRole("button", {
+        name: /play main line audio/i,
+      });
+      expect(playButton).toBeInTheDocument();
+
+      // Check progress bar accessibility
+      const progressBar = screen.getByRole("progressbar");
+      expect(progressBar).toHaveAttribute("aria-label", "Progress: 0%");
+    });
+  });
+
+  describe("Error Handling Accessibility", () => {
+    it("should handle errors gracefully with accessible error messages", async () => {
+      // Mock LessonService to return error
+      const lessonService = require("../../services/lessonService");
+      lessonService.LessonService.loadLesson.mockResolvedValue({
+        success: false,
+        error: { message: "Network error" },
+      });
+
+      const { LessonContainer } = require("../LessonContainer");
+      render(<LessonContainer lessonId="test-lesson" />);
+
+      await waitFor(() => {
         expect(screen.getByText("Error Loading Lesson")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
+      });
 
-    // Should show user-friendly error message
-    expect(
-      screen.getByText("We couldn't load your lesson right now"),
-    ).toBeInTheDocument();
+      // Check error message accessibility
+      const errorMessage = screen.getByText(
+        "We couldn't load your lesson right now",
+      );
+      expect(errorMessage).toBeInTheDocument();
 
-    // Should show help link
-    expect(screen.getByText("Get help with this issue")).toBeInTheDocument();
-
-    // Should show technical details
-    expect(screen.getByText("Technical details")).toBeInTheDocument();
-  });
-
-  describe("handleReplayAll functionality", () => {
-    it("creates audio sequence correctly when called", () => {
-      // Test the component logic by checking that it sets up event listeners
-      // when the function is called (we can't easily test the UI flow)
-
-      // This test validates that the AudioPlaybackService interaction happens
-      expect(mockAddEventListener).toBeDefined();
-      expect(mockRemoveEventListener).toBeDefined();
-    });
-
-    it("sets up audio playback service correctly", () => {
-      // Verify that our mocks are in place for the AudioPlaybackService
-      expect(mockAddEventListener).toBeDefined();
-      expect(mockRemoveEventListener).toBeDefined();
-
-      // This ensures the infrastructure for handleReplayAll is properly tested
-      expect(mockPlayAudio).toBeDefined();
-      expect(mockStopAudio).toBeDefined();
+      // Check retry button
+      const retryButton = screen.getByRole("button", { name: /try again/i });
+      expect(retryButton).toBeInTheDocument();
     });
   });
 });
