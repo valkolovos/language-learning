@@ -47,6 +47,8 @@ export class EventTrackingService {
 
   private constructor() {
     // Set prune threshold to 20% above maxEvents for consistent behavior
+    // This buffer prevents frequent pruning on every single event addition
+    // while maintaining memory efficiency by not letting events grow too large
     this.pruneThreshold = Math.floor(this.maxEvents * 1.2);
   }
 

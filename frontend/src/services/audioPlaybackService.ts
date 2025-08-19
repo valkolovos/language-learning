@@ -96,7 +96,7 @@ export class AudioPlaybackService {
         details: { text: audioClip.text, language: audioClip.language },
       });
     } catch (error) {
-      this.error = `Failed to start TTS: ${error}`;
+      this.error = `Failed to start audio playback: ${error}`;
       this.emitEvent({
         type: "play_error",
         audioId: audioClip.id,
