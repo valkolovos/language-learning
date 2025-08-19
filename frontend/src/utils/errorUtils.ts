@@ -29,11 +29,12 @@ export function createExtendedError(
   technicalDetails?: string,
   helpUrl?: string,
 ): ExtendedError {
-  const error = new Error(message) as ExtendedError;
-  error.userMessage = userMessage;
-  error.technicalDetails = technicalDetails || message; // Fallback to message if no technical details
-  error.helpUrl = helpUrl || ""; // Empty string if no help URL
-  return error;
+  const error = new Error(message);
+  return Object.assign(error, {
+    userMessage,
+    technicalDetails: technicalDetails || message, // Fallback to message if no technical details
+    helpUrl: helpUrl || "", // Empty string if no help URL
+  }) as ExtendedError;
 }
 
 /**

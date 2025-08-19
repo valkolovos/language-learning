@@ -43,9 +43,12 @@ export class EventTrackingService {
   private static instance: EventTrackingService;
   private events: TrackedEvent[] = [];
   private maxEvents: number = 100; // Keep last 100 events in memory
-  private pruneThreshold: number = 120; // Start pruning when we exceed this threshold
+  private pruneThreshold: number; // Start pruning when we exceed this threshold
 
-  private constructor() {}
+  private constructor() {
+    // Set prune threshold to 20% above maxEvents for consistent behavior
+    this.pruneThreshold = Math.floor(this.maxEvents * 1.2);
+  }
 
   static getInstance(): EventTrackingService {
     if (!EventTrackingService.instance) {
