@@ -109,6 +109,7 @@ export class EventTrackingService {
    * Get all tracked events
    */
   getEvents(): TrackedEvent[] {
+    // Return events in chronological order
     return [...this.events];
   }
 
@@ -116,7 +117,7 @@ export class EventTrackingService {
    * Get events by type
    */
   getEventsByType(type: TrackedEvent["type"]): TrackedEvent[] {
-    return this.events.filter((event) => event.type === type);
+    return this.getEvents().filter((event) => event.type === type);
   }
 
   /**
@@ -130,7 +131,7 @@ export class EventTrackingService {
    * Export events as JSON (useful for debugging/inspection)
    */
   exportEvents(): string {
-    return JSON.stringify(this.events, null, 2);
+    return JSON.stringify(this.getEvents(), null, 2);
   }
 
   /**
@@ -138,7 +139,8 @@ export class EventTrackingService {
    */
   logEvents(): void {
     log.debug("Event Tracking - All Events");
-    this.events.forEach((event, index) => {
+    const events = this.getEvents();
+    events.forEach((event, index) => {
       log.debug(`${index + 1}. ${event.type}`, event);
     });
   }
@@ -159,13 +161,14 @@ export class EventTrackingService {
   }
 
   /**
-   * Efficiently prune events by removing excess events in batches
+   * Efficiently prune events by keeping only the most recent maxEvents
+   * This maintains chronological order while limiting memory usage
    */
   private pruneEvents(): void {
     const excessCount = this.events.length - this.maxEvents;
     if (excessCount > 0) {
-      // Remove excess events from the beginning of the array
-      this.events.splice(0, excessCount);
+      // Keep only the most recent events by slicing from the end
+      this.events = this.events.slice(-this.maxEvents);
     }
   }
 }

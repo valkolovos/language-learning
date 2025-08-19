@@ -11,7 +11,7 @@ export interface SerializedError {
   value?: string;
   userMessage?: string;
   technicalDetails?: string;
-  helpUrl?: string;
+  helpUrl?: string; // Optional help URL for user guidance
   [key: string]: unknown;
 }
 
@@ -33,7 +33,7 @@ export function createExtendedError(
   return Object.assign(error, {
     userMessage,
     technicalDetails: technicalDetails || message, // Fallback to message if no technical details
-    helpUrl: helpUrl || "", // Empty string if no help URL
+    helpUrl: helpUrl, // Keep undefined if no help URL provided
   }) as ExtendedError;
 }
 
@@ -127,7 +127,7 @@ export function serializeError(error: unknown): SerializedError {
       stack: error.stack,
       userMessage: error.userMessage,
       technicalDetails: error.technicalDetails,
-      helpUrl: error.helpUrl,
+      helpUrl: error.helpUrl, // This will be undefined if not provided
     };
   }
 

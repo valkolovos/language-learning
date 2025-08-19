@@ -134,12 +134,14 @@ describe("EventTrackingService", () => {
       service.trackLessonStarted("lesson-1");
       service.trackLessonStarted("lesson-2");
       service.trackLessonStarted("lesson-3");
-      service.trackLessonStarted("lesson-4"); // This should remove the first event
+      service.trackLessonStarted("lesson-4"); // This should trigger pruning
 
-      expect(service["events"]).toHaveLength(3);
-      expect(service["events"][0].lessonId).toBe("lesson-2");
-      expect(service["events"][1].lessonId).toBe("lesson-3");
-      expect(service["events"][2].lessonId).toBe("lesson-4");
+      // With circular buffer, we get the most recent events
+      const events = service.getEvents();
+      expect(events).toHaveLength(3);
+      expect(events[0].lessonId).toBe("lesson-2");
+      expect(events[1].lessonId).toBe("lesson-3");
+      expect(events[2].lessonId).toBe("lesson-4");
     });
   });
 
@@ -154,7 +156,7 @@ describe("EventTrackingService", () => {
     });
 
     it("should return all events", () => {
-      const allEvents = service["events"];
+      const allEvents = service.getEvents();
       expect(allEvents).toHaveLength(4);
       expect(allEvents[0].type).toBe("lesson_started");
       expect(allEvents[1].type).toBe("audio_play");
@@ -163,12 +165,12 @@ describe("EventTrackingService", () => {
     });
 
     it("should filter events by type", () => {
-      const lessonEvents = service["events"].filter(
-        (e) => e.type === "lesson_started",
-      );
-      const audioEvents = service["events"].filter(
-        (e) => e.type === "audio_play",
-      );
+      const lessonEvents = service
+        .getEvents()
+        .filter((e) => e.type === "lesson_started");
+      const audioEvents = service
+        .getEvents()
+        .filter((e) => e.type === "audio_play");
 
       expect(lessonEvents).toHaveLength(1);
       expect(audioEvents).toHaveLength(1);
@@ -177,9 +179,9 @@ describe("EventTrackingService", () => {
     });
 
     it("should filter events by lesson ID", () => {
-      const lesson1Events = service["events"].filter(
-        (e) => e.lessonId === "lesson-1",
-      );
+      const lesson1Events = service
+        .getEvents()
+        .filter((e) => e.lessonId === "lesson-1");
       expect(lesson1Events).toHaveLength(4);
     });
   });
@@ -216,7 +218,7 @@ describe("EventTrackingService", () => {
       }
 
       // Should complete in reasonable time (less than 100ms)
-      expect(service["events"]).toHaveLength(100);
+      expect(service.getEvents()).toHaveLength(100);
     });
   });
 });
