@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Lesson, LessonLoadResult, AudioClip } from "../types/lesson";
+import {
+  Lesson,
+  LessonLoadResult,
+  AudioClip,
+  ExtendedError,
+  AudioPlaybackEvent,
+} from "../types/lesson";
 import { LessonService } from "../services/lessonService";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { AudioPlayer } from "./AudioPlayer";
@@ -7,6 +13,11 @@ import { PhrasePlayer } from "./PhrasePlayer";
 import { TranscriptToggle } from "./TranscriptToggle";
 import { ProgressIndicator } from "./ProgressIndicator";
 import { EventTrackingService } from "../services/eventTrackingService";
+import { AudioPlaybackService } from "../services/audioPlaybackService";
+import {
+  createExtendedError,
+  getUserFriendlyMessage,
+} from "../utils/errorUtils";
 import log from "../services/logger";
 
 interface LessonContainerProps {
@@ -18,7 +29,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
 }) => {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ExtendedError | null>(null);
   const [textRevealed, setTextRevealed] = useState(false);
   const [transcriptVisible, setTranscriptVisible] = useState(true);
   const [xp, setXp] = useState(0);
@@ -47,10 +58,25 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
         // Track lesson started event
         eventTracking.current.trackLessonStarted(lessonId);
       } else {
-        setError(result.error?.message || "Failed to load lesson");
+        const errorMessage = result.error?.message || "Failed to load lesson";
+        setError(
+          createExtendedError(
+            errorMessage,
+            "We couldn't load your lesson right now",
+            `Technical details: ${errorMessage}`,
+            "https://help.example.com/lesson-loading",
+          ),
+        );
       }
     } catch (err) {
-      setError("Unexpected error occurred while loading lesson");
+      setError(
+        createExtendedError(
+          "Unexpected error occurred while loading lesson",
+          "Something went wrong while loading your lesson",
+          `Technical error: ${err instanceof Error ? err.message : String(err)}`,
+          "https://help.example.com/troubleshooting",
+        ),
+      );
       log.error("Lesson loading error:", err);
     } finally {
       setLoading(false);
@@ -94,11 +120,56 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   // Handle replay all phrases
   const handleReplayAll = () => {
     if (lesson) {
-      // Play main line first, then phrases in sequence
-      playAudio(lesson.mainLine.audio);
-      // Award XP for replay all action
-      setXp((prev) => prev + 25);
+      try {
+        // Create a sequence of all audio clips to play
+        const audioSequence = [
+          lesson.mainLine.audio,
+          ...lesson.phrases.map((p) => p.audio),
+        ];
+
+        // Play audio clips in sequence
+        playAudioSequence(audioSequence);
+
+        // Award XP for replay all action
+        setXp((prev) => prev + 25);
+      } catch (error) {
+        log.error("Error during replay all:", error);
+      }
     }
+  };
+
+  // Helper function to play audio clips in sequence
+  const playAudioSequence = (audioClips: AudioClip[]) => {
+    if (audioClips.length === 0) return;
+
+    let currentIndex = 0;
+
+    const playNext = () => {
+      if (currentIndex >= audioClips.length) return;
+
+      const currentClip = audioClips[currentIndex];
+      playAudio(currentClip);
+      currentIndex++;
+    };
+
+    // Listen for audio completion events to trigger next audio
+    const handleAudioComplete = (event: AudioPlaybackEvent) => {
+      if (event.type === "play_completed") {
+        setTimeout(playNext, 500); // Small delay between audio clips for better UX
+      }
+    };
+
+    // Add temporary event listener
+    const audioService = AudioPlaybackService.getInstance();
+    audioService.addEventListener(handleAudioComplete);
+
+    // Start the sequence
+    playNext();
+
+    // Clean up listener after sequence completes
+    setTimeout(() => {
+      audioService.removeEventListener(handleAudioComplete);
+    }, audioClips.length * 5000); // Generous timeout for cleanup
   };
 
   // Handle main line audio play
@@ -128,7 +199,21 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
       <div className="lesson-container error">
         <div className="error-message">
           <h3>Error Loading Lesson</h3>
-          <p>{error}</p>
+          <p className="user-message">{getUserFriendlyMessage(error)}</p>
+
+          {error.helpUrl && (
+            <p className="help-link">
+              <a href={error.helpUrl} target="_blank" rel="noopener noreferrer">
+                Get help with this issue
+              </a>
+            </p>
+          )}
+
+          <details className="error-details">
+            <summary>Technical details</summary>
+            <p className="technical-details">{error.technicalDetails}</p>
+          </details>
+
           <button onClick={loadLesson} className="retry-button">
             Try Again
           </button>

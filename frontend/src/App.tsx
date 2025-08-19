@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "./App.css";
 import { LessonContainer } from "./components/LessonContainer";
 import { LessonService } from "./services/lessonService";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import log from "./services/logger";
 
 function App() {
@@ -72,7 +73,9 @@ function App() {
             <strong>Next:</strong> Audio playback and reveal gate logic
           </p>
 
-          <LessonContainer lessonId={selectedLessonId} />
+          <ErrorBoundary>
+            <LessonContainer lessonId={selectedLessonId} />
+          </ErrorBoundary>
         </div>
       </main>
     </div>

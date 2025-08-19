@@ -2,9 +2,9 @@ import {
   AudioClip,
   AudioPlaybackState,
   AudioPlaybackEvent,
-  ExtendedError,
   isTTSAudioClip,
 } from "../types/lesson";
+import { createExtendedError } from "../utils/errorUtils";
 import {
   AUDIO_IDS,
   AUDIO_SETTINGS,
@@ -28,19 +28,15 @@ export class AudioPlaybackService {
     if (!window.speechSynthesis) {
       const userFriendlyMessage =
         "Speech synthesis is not supported in your browser.";
-      const detailedMessage =
-        "This feature requires a modern browser with speech synthesis support. " +
-        "Supported browsers include Chrome 33+, Safari 7+, Edge 79+, and Firefox 49+. " +
-        "Consider updating your browser or using a supported browser for the best experience.";
+      const detailedMessage = `This feature requires a modern browser with speech synthesis support. Supported browsers include Chrome 33+, Safari 7+, Edge 79+, and Firefox 49+. Consider updating your browser or using a supported browser for the best experience.`;
 
       // Create error with user-friendly message and detailed info
-      const error = new Error(userFriendlyMessage) as ExtendedError;
-      error.userMessage = userFriendlyMessage;
-      error.technicalDetails = detailedMessage;
-      error.helpUrl =
-        "https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API#browser_compatibility";
-
-      throw error;
+      throw createExtendedError(
+        userFriendlyMessage,
+        userFriendlyMessage,
+        detailedMessage,
+        "https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API#browser_compatibility",
+      );
     }
 
     this.speechSynthesis = window.speechSynthesis;

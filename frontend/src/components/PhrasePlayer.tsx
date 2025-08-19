@@ -46,7 +46,7 @@ export const PhrasePlayer: React.FC<PhrasePlayerProps> = ({
   };
 
   return (
-    <div className={`phrase-player ${className}`}>
+    <div className={`phrase-player ${className}`} data-testid="phrase-player">
       <div className="phrase-content">
         <div className="phrase-text">
           <p className="native-text">{nativeText}</p>
@@ -74,6 +74,7 @@ export const PhrasePlayer: React.FC<PhrasePlayerProps> = ({
             className="phrase-status"
             aria-live="polite"
             aria-hidden="true"
+            data-testid="phrase-status"
           >
             {isPlaying ? `Playing: ${nativeText}` : ""}
           </div>
