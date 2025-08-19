@@ -276,6 +276,57 @@ describe("AudioPlaybackService", () => {
       service.resetPlayback();
       expect(service.getMainLineAudioId()).toBe(AUDIO_IDS.MAIN_LINE);
     });
+
+    it("should reset play count and reveal state when main line audio ID changes", () => {
+      const mockListener = jest.fn();
+      service.addEventListener(mockListener);
+
+      // Set initial main line and simulate some plays
+      service.setMainLineAudioId("initial-main-line");
+      service["playCount"] = 3;
+      service["canReveal"] = true;
+
+      // Change to a new main line
+      service.setMainLineAudioId("new-main-line");
+
+      // Verify state was reset
+      expect(service.getMainLineAudioId()).toBe("new-main-line");
+      expect(service["playCount"]).toBe(0);
+      expect(service["canReveal"]).toBe(false);
+
+      // Verify event was emitted with correct previous ID
+      expect(mockListener).toHaveBeenCalledWith({
+        type: "main_line_changed",
+        audioId: "new-main-line",
+        timestamp: expect.any(Number),
+        details: {
+          previousMainLineId: "initial-main-line",
+          playCountReset: true,
+        },
+      });
+    });
+
+    it("should not reset state when setting the same main line audio ID", () => {
+      const mockListener = jest.fn();
+
+      // Set initial state first
+      service.setMainLineAudioId("test-main-line");
+      service["playCount"] = 2;
+      service["canReveal"] = false;
+
+      // Now add listener after initial setup
+      service.addEventListener(mockListener);
+
+      // Set the same ID again
+      service.setMainLineAudioId("test-main-line");
+
+      // Verify state was not reset
+      expect(service["playCount"]).toBe(2);
+      expect(service["canReveal"]).toBe(false);
+
+      // Verify no event was emitted
+      expect(mockListener).not.toHaveBeenCalled();
+    });
   });
 
   describe("event listeners", () => {

@@ -19,21 +19,69 @@ export interface SerializedError {
  * Create an ExtendedError with user-friendly messaging
  * @param message - Technical error message
  * @param userMessage - User-friendly error message
- * @param technicalDetails - Detailed technical information
- * @param helpUrl - URL for help documentation
+ * @param technicalDetails - Detailed technical information (optional, defaults to message)
+ * @param helpUrl - URL for help documentation (optional, defaults to empty string)
  * @returns ExtendedError - Enhanced error with user-friendly properties
  */
 export function createExtendedError(
   message: string,
   userMessage: string,
-  technicalDetails: string,
-  helpUrl: string,
+  technicalDetails?: string,
+  helpUrl?: string,
 ): ExtendedError {
   const error = new Error(message) as ExtendedError;
   error.userMessage = userMessage;
-  error.technicalDetails = technicalDetails;
-  error.helpUrl = helpUrl;
+  error.technicalDetails = technicalDetails || message; // Fallback to message if no technical details
+  error.helpUrl = helpUrl || ""; // Empty string if no help URL
   return error;
+}
+
+/**
+ * Create an ExtendedError with minimal required information
+ * @param message - Technical error message
+ * @param userMessage - User-friendly error message
+ * @returns ExtendedError - Enhanced error with default technical details
+ */
+export function createSimpleExtendedError(
+  message: string,
+  userMessage: string,
+): ExtendedError {
+  return createExtendedError(message, userMessage);
+}
+
+/**
+ * Create an ExtendedError without help URL for internal/development errors
+ * @param message - Technical error message
+ * @param userMessage - User-friendly error message
+ * @param technicalDetails - Detailed technical information (optional)
+ * @returns ExtendedError - Enhanced error without help URL
+ */
+export function createInternalError(
+  message: string,
+  userMessage: string,
+  technicalDetails?: string,
+): ExtendedError {
+  return createExtendedError(message, userMessage, technicalDetails);
+}
+
+/**
+ * Wrap an existing Error object into an ExtendedError
+ * @param error - The original error to wrap
+ * @param userMessage - User-friendly error message
+ * @param helpUrl - URL for help documentation (optional)
+ * @returns ExtendedError - Enhanced error wrapping the original
+ */
+export function wrapError(
+  error: Error,
+  userMessage: string,
+  helpUrl?: string,
+): ExtendedError {
+  return createExtendedError(
+    error.message,
+    userMessage,
+    error.stack || error.message,
+    helpUrl,
+  );
 }
 
 /**

@@ -183,7 +183,25 @@ export class AudioPlaybackService {
    * @param audioId - The audio ID that represents the main line for the current lesson phase
    */
   setMainLineAudioId(audioId: string): void {
-    this.mainLineAudioId = audioId;
+    // Only reset if the main line ID is actually changing
+    if (this.mainLineAudioId !== audioId) {
+      const previousMainLineId = this.mainLineAudioId;
+      this.mainLineAudioId = audioId;
+      // Reset play count and reveal state for the new main line
+      this.playCount = 0;
+      this.canReveal = false;
+
+      // Emit event to notify listeners of the reset
+      this.emitEvent({
+        type: "main_line_changed",
+        audioId: audioId,
+        timestamp: Date.now(),
+        details: {
+          previousMainLineId: previousMainLineId,
+          playCountReset: true,
+        },
+      });
+    }
   }
 
   /**

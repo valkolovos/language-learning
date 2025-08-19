@@ -250,9 +250,14 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     if (audioClips.length === 0) return;
 
     let currentIndex = 0;
+    let isSequenceActive = true;
 
     const playNext = () => {
-      if (currentIndex >= audioClips.length) return;
+      if (currentIndex >= audioClips.length || !isSequenceActive) {
+        // Sequence completed or was cancelled
+        cleanup();
+        return;
+      }
 
       const currentClip = audioClips[currentIndex];
       playAudio(currentClip);
@@ -261,9 +266,15 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
 
     // Listen for audio completion events to trigger next audio
     const handleAudioComplete = (event: AudioPlaybackEvent) => {
-      if (event.type === "play_completed") {
+      if (event.type === "play_completed" && isSequenceActive) {
         setTimeout(playNext, 500); // Small delay between audio clips for better UX
       }
+    };
+
+    // Cleanup function to remove event listener
+    const cleanup = () => {
+      isSequenceActive = false;
+      audioService.removeEventListener(handleAudioComplete);
     };
 
     // Add temporary event listener
@@ -273,10 +284,21 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     // Start the sequence
     playNext();
 
-    // Clean up listener after sequence completes
+    // Calculate total expected duration with safety margin
+    const totalDuration = audioClips.reduce(
+      (sum, clip) => sum + clip.duration,
+      0,
+    );
+    const safetyMargin = 2000; // 2 seconds safety margin
+    const cleanupTimeout = totalDuration * 1000 + safetyMargin;
+
+    // Fallback cleanup timeout based on actual durations
     setTimeout(() => {
-      audioService.removeEventListener(handleAudioComplete);
-    }, audioClips.length * 5000); // Generous timeout for cleanup
+      if (isSequenceActive) {
+        log.warn("Audio sequence cleanup timeout reached, forcing cleanup");
+        cleanup();
+      }
+    }, cleanupTimeout);
   };
 
   // Handle main line audio play

@@ -115,7 +115,12 @@ export interface AudioPlaybackState {
 }
 
 export interface AudioPlaybackEvent {
-  type: "play_started" | "play_completed" | "play_error" | "play_aborted";
+  type:
+    | "play_started"
+    | "play_completed"
+    | "play_error"
+    | "play_aborted"
+    | "main_line_changed";
   audioId: string;
   timestamp: number;
   details?: Record<string, unknown>;
