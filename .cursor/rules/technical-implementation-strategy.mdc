@@ -1,7 +1,7 @@
 ---
 description: Technical implementation approach and commit breakdown
 globs: ["**/*"]
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Technical Implementation Strategy
@@ -19,6 +19,7 @@ Follow the commit breakdown: Foundation → Audio Engine → Reveal Gate → UI 
 ## Development Approach
 - Incremental commits building on previous work
 - Test and validate at each step
+- Maintain or improve code coverage
 - Focus on fastest proof-of-value
 - Implementation-agnostic functional specs
 - Local-first architecture with offline capability
