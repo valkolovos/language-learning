@@ -252,6 +252,22 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     let currentIndex = 0;
     let isSequenceActive = true;
 
+    // Get audio service instance early
+    const audioService = AudioPlaybackService.getInstance();
+
+    // Fallback timeout ID for cleanup
+    let fallbackTimeoutId: NodeJS.Timeout | undefined;
+
+    // Cleanup function to remove event listener and clear timeout
+    const cleanup = () => {
+      isSequenceActive = false;
+      if (fallbackTimeoutId) {
+        clearTimeout(fallbackTimeoutId);
+        fallbackTimeoutId = undefined;
+      }
+      audioService.removeEventListener(handleAudioComplete);
+    };
+
     const playNext = () => {
       if (currentIndex >= audioClips.length || !isSequenceActive) {
         // Sequence completed or was cancelled
@@ -271,14 +287,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
       }
     };
 
-    // Cleanup function to remove event listener
-    const cleanup = () => {
-      isSequenceActive = false;
-      audioService.removeEventListener(handleAudioComplete);
-    };
-
     // Add temporary event listener
-    const audioService = AudioPlaybackService.getInstance();
     audioService.addEventListener(handleAudioComplete);
 
     // Start the sequence
@@ -293,7 +302,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     const cleanupTimeout = totalDuration * 1000 + safetyMargin;
 
     // Fallback cleanup timeout based on actual durations
-    setTimeout(() => {
+    fallbackTimeoutId = setTimeout(() => {
       if (isSequenceActive) {
         log.warn("Audio sequence cleanup timeout reached, forcing cleanup");
         cleanup();
