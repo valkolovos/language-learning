@@ -11,7 +11,7 @@ import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { AudioPlayer } from "./AudioPlayer";
 import { PhrasePlayer } from "./PhrasePlayer";
 import { TranscriptToggle } from "./TranscriptToggle";
-import { ProgressIndicator } from "./ProgressIndicator";
+
 import { EventTrackingService } from "../services/eventTrackingService";
 import { AudioPlaybackService } from "../services/audioPlaybackService";
 import {
@@ -23,10 +23,14 @@ import log from "../services/logger";
 
 interface LessonContainerProps {
   lessonId: string;
+  onXpChange?: (xp: number) => void;
+  onProgressChange?: (progress: number) => void;
 }
 
 export const LessonContainer: React.FC<LessonContainerProps> = ({
   lessonId,
+  onXpChange,
+  onProgressChange,
 }) => {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +38,9 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   const [textRevealed, setTextRevealed] = useState(false);
   const [transcriptVisible, setTranscriptVisible] = useState(true);
   const [xp, setXp] = useState(0);
-  const [showXpBreakdown, setShowXpBreakdown] = useState(false);
+  const [currentlyPlayingPhraseId, setCurrentlyPlayingPhraseId] = useState<
+    string | null
+  >(null);
 
   // Initialize services using refs to avoid dependency issues
   const eventTracking = useRef(EventTrackingService.getInstance());
@@ -49,6 +55,9 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   const replayAllButtonRef = useRef<HTMLButtonElement>(null);
   const transcriptToggleRef = useRef<HTMLButtonElement>(null);
   const firstPhraseButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Phrase player refs for scrolling
+  const phraseRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // Screen reader announcements
   const [announcement, setAnnouncement] = useState("");
@@ -78,7 +87,9 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
 
   // Focus management functions
   const focusRevealButton = useCallback(() => {
-    revealButtonRef.current?.focus();
+    setTimeout(() => {
+      revealButtonRef.current?.focus();
+    }, 100);
   }, []);
 
   const focusFirstPhraseButton = useCallback(() => {
@@ -121,6 +132,41 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     playbackState.currentAudioId,
     announceToScreenReader,
   ]);
+
+  // Notify parent component of XP changes
+  useEffect(() => {
+    onXpChange?.(xp);
+  }, [xp, onXpChange]);
+
+  // Calculate and notify parent of lesson progress
+  useEffect(() => {
+    if (!lesson) {
+      onProgressChange?.(0);
+      return;
+    }
+
+    let progress = 0;
+
+    // Main line progress (50% of total)
+    if (textRevealed) {
+      progress += 50;
+    } else if (playbackState.playCount > 0) {
+      progress += (playbackState.playCount / 2) * 50;
+    }
+
+    // Phrase interaction progress (50% of total)
+    if (textRevealed) {
+      // Base bonus for revealing text (25%)
+      progress += 25;
+
+      // Additional progress for phrase interactions (up to 25%)
+      // Each phrase interaction adds 5% progress
+      const phraseProgress = Math.min(25, ((xp - 50) / 10) * 5); // 50 XP is from reveal, each phrase is 10 XP
+      progress += phraseProgress;
+    }
+
+    onProgressChange?.(Math.min(100, Math.round(progress)));
+  }, [lesson, textRevealed, playbackState.playCount, xp, onProgressChange]);
 
   const loadLesson = useCallback(async () => {
     try {
@@ -195,15 +241,6 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     );
   };
 
-  // Handle XP breakdown toggle
-  const handleXpBreakdownToggle = () => {
-    setShowXpBreakdown((prev) => !prev);
-    // Announce XP breakdown state change
-    announceToScreenReader(
-      showXpBreakdown ? "XP breakdown hidden" : "XP breakdown shown",
-    );
-  };
-
   // Handle phrase replay
   const handlePhrasePlay = (audioClip: AudioClip) => {
     playAudio(audioClip);
@@ -240,6 +277,18 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     }
   };
 
+  // Helper function to scroll to a phrase
+  const scrollToPhrase = useCallback((phraseId: string) => {
+    const phraseElement = phraseRefs.current[phraseId];
+    if (phraseElement) {
+      phraseElement.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+      });
+    }
+  }, []);
+
   // Helper function to play audio clips in sequence
   const playAudioSequence = (audioClips: AudioClip[]) => {
     if (audioClips.length === 0) return;
@@ -261,16 +310,33 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
         fallbackTimeoutId = undefined;
       }
       audioService.removeEventListener(handleAudioComplete);
+      setCurrentlyPlayingPhraseId(null);
     };
 
     const playNext = () => {
       if (currentIndex >= audioClips.length || !isSequenceActive) {
         // Sequence completed or was cancelled
+        setCurrentlyPlayingPhraseId(null);
         cleanup();
         return;
       }
 
       const currentClip = audioClips[currentIndex];
+
+      // Update currently playing phrase for visual feedback and scrolling
+      if (currentIndex === 0) {
+        // Playing main line - don't highlight any phrase
+        setCurrentlyPlayingPhraseId(null);
+      } else {
+        // Playing a phrase - highlight and scroll to it
+        const phraseIndex = currentIndex - 1; // Subtract 1 because first clip is main line
+        if (lesson && lesson.phrases[phraseIndex]) {
+          const phraseId = lesson.phrases[phraseIndex].id;
+          setCurrentlyPlayingPhraseId(phraseId);
+          scrollToPhrase(phraseId);
+        }
+      }
+
       playAudio(currentClip);
       currentIndex++;
     };
@@ -368,22 +434,6 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     );
   }
 
-  // Calculate progress percentage based on actions completed
-  const calculateProgress = () => {
-    // Listening phase contributes up to 50%
-    const listeningProgress = Math.min(1, playbackState.playCount / 2) * 50;
-
-    if (!textRevealed) {
-      return Math.min(50, listeningProgress);
-    }
-
-    // Engagement (XP) contributes up to the remaining 50%
-    const engagementProgress = Math.min(1, xp / 100) * 50;
-
-    // Total progress is capped at 100%
-    return Math.min(100, 50 + engagementProgress);
-  };
-
   return (
     <div className="lesson-container">
       {/* Screen reader announcements */}
@@ -409,15 +459,6 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
           </div>
         )}
       </div>
-
-      {/* Progress Indicator */}
-      <ProgressIndicator
-        xp={xp}
-        progressPercentage={calculateProgress()}
-        className="lesson-progress"
-        showBreakdown={showXpBreakdown}
-        onToggleBreakdown={handleXpBreakdownToggle}
-      />
 
       <div className="lesson-content">
         {/* Listen-First Section */}
@@ -522,24 +563,35 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
               <p className="phrase-hint">{MICROCOPY.PHRASE_REPLAY_HINT}</p>
               <div className="phrases-list">
                 {lesson.phrases.map((phrase, index) => (
-                  <PhrasePlayer
+                  <div
                     key={phrase.id}
-                    ref={index === 0 ? firstPhraseButtonRef : undefined}
-                    phraseId={phrase.id}
-                    nativeText={phrase.nativeText}
-                    gloss={phrase.gloss}
-                    tips={phrase.tips}
-                    audio={phrase.audio}
-                    isPlaying={
-                      playbackState.isPlaying &&
-                      playbackState.currentAudioId === phrase.audio.id
-                    }
-                    onPlay={handlePhrasePlay}
-                    onStop={stopAudio}
-                    className="phrase-player-item"
-                    showGloss={transcriptVisible}
-                    onKeyDown={handleKeyDown}
-                  />
+                    ref={(el) => {
+                      phraseRefs.current[phrase.id] = el;
+                    }}
+                    className={`phrase-player-wrapper ${
+                      currentlyPlayingPhraseId === phrase.id
+                        ? "playing-in-sequence"
+                        : ""
+                    }`}
+                  >
+                    <PhrasePlayer
+                      ref={index === 0 ? firstPhraseButtonRef : undefined}
+                      phraseId={phrase.id}
+                      nativeText={phrase.nativeText}
+                      gloss={phrase.gloss}
+                      tips={phrase.tips}
+                      audio={phrase.audio}
+                      isPlaying={
+                        playbackState.isPlaying &&
+                        playbackState.currentAudioId === phrase.audio.id
+                      }
+                      onPlay={handlePhrasePlay}
+                      onStop={stopAudio}
+                      className="phrase-player-item"
+                      showGloss={transcriptVisible}
+                      onKeyDown={handleKeyDown}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
