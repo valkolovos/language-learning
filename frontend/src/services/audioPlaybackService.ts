@@ -10,6 +10,7 @@ import {
   AUDIO_SETTINGS,
   PLAYBACK_THRESHOLDS,
 } from "../constants/audio";
+import { BROWSER_REQUIREMENTS, BROWSER_MESSAGES } from "../constants/browser";
 
 export class AudioPlaybackService {
   private static instance: AudioPlaybackService;
@@ -40,15 +41,16 @@ export class AudioPlaybackService {
     // Check if Web Speech API is supported
     if (!window.speechSynthesis) {
       const userFriendlyMessage =
-        "Speech synthesis is not supported in your browser.";
-      const detailedMessage = `This feature requires a modern browser with speech synthesis support. Supported browsers include Chrome 33+, Safari 7+, Edge 79+, and Firefox 49+. Consider updating your browser or using a supported browser for the best experience.`;
+        BROWSER_MESSAGES.SPEECH_SYNTHESIS_UNSUPPORTED.USER_FRIENDLY;
+      const detailedMessage =
+        BROWSER_MESSAGES.SPEECH_SYNTHESIS_UNSUPPORTED.DETAILED;
 
       // Create error with user-friendly message and detailed info
       throw createExtendedError(
         userFriendlyMessage,
         userFriendlyMessage,
         detailedMessage,
-        "https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API#browser_compatibility",
+        BROWSER_REQUIREMENTS.SPEECH_SYNTHESIS.DOCUMENTATION_URL,
       );
     }
 
