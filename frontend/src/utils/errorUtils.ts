@@ -11,7 +11,7 @@ export interface SerializedError {
   value?: string;
   userMessage?: string;
   technicalDetails?: string;
-  helpUrl?: string; // Optional help URL for user guidance
+  helpUrl: string; // Help URL for user guidance (required for consistency)
   [key: string]: unknown;
 }
 
@@ -33,7 +33,7 @@ export function createExtendedError(
   return Object.assign(error, {
     userMessage,
     technicalDetails: technicalDetails || message, // Fallback to message if no technical details
-    helpUrl: helpUrl, // Keep undefined if no help URL provided
+    helpUrl: helpUrl || "https://help.example.com/troubleshooting", // Default help URL for consistent guidance
   }) as ExtendedError;
 }
 
@@ -47,7 +47,12 @@ export function createSimpleExtendedError(
   message: string,
   userMessage: string,
 ): ExtendedError {
-  return createExtendedError(message, userMessage);
+  return createExtendedError(
+    message,
+    userMessage,
+    undefined,
+    "https://help.example.com/troubleshooting",
+  );
 }
 
 /**
@@ -62,7 +67,12 @@ export function createInternalError(
   userMessage: string,
   technicalDetails?: string,
 ): ExtendedError {
-  return createExtendedError(message, userMessage, technicalDetails);
+  return createExtendedError(
+    message,
+    userMessage,
+    technicalDetails,
+    "https://help.example.com/internal-errors",
+  );
 }
 
 /**
@@ -81,7 +91,7 @@ export function wrapError(
     error.message,
     userMessage,
     error.stack || error.message,
-    helpUrl,
+    helpUrl || "https://help.example.com/troubleshooting",
   );
 }
 
@@ -93,9 +103,11 @@ export function wrapError(
 export function isExtendedError(error: unknown): error is ExtendedError {
   return (
     error instanceof Error &&
-    "userMessage" in error &&
-    "technicalDetails" in error &&
-    "helpUrl" in error
+    typeof (error as unknown as Record<string, unknown>).userMessage ===
+      "string" &&
+    typeof (error as unknown as Record<string, unknown>).technicalDetails ===
+      "string" &&
+    typeof (error as unknown as Record<string, unknown>).helpUrl === "string"
   );
 }
 
@@ -127,7 +139,7 @@ export function serializeError(error: unknown): SerializedError {
       stack: error.stack,
       userMessage: error.userMessage,
       technicalDetails: error.technicalDetails,
-      helpUrl: error.helpUrl, // This will be undefined if not provided
+      helpUrl: error.helpUrl, // This is now always defined
     };
   }
 
@@ -136,12 +148,14 @@ export function serializeError(error: unknown): SerializedError {
       message: error.message,
       name: error.name,
       stack: error.stack,
+      helpUrl: "https://help.example.com/troubleshooting", // Default help URL for regular errors
     };
   }
 
   return {
     message: String(error),
     value: String(error),
+    helpUrl: "https://help.example.com/troubleshooting", // Default help URL for unknown errors
   };
 }
 

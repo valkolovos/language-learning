@@ -155,5 +155,5 @@ export interface AudioPlaybackEvent {
 export interface ExtendedError extends Error {
   userMessage: string;
   technicalDetails: string;
-  helpUrl?: string; // Optional help URL for user guidance
+  helpUrl: string; // Help URL for user guidance (required for consistent error handling)
 }

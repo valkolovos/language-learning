@@ -21,7 +21,20 @@ export class AudioPlaybackService {
   private canReveal: boolean = false;
   private error: string | null = null;
   private eventListeners: ((event: AudioPlaybackEvent) => void)[] = [];
-  private mainLineAudioId: string = AUDIO_IDS.MAIN_LINE; // Configurable main line identifier
+
+  /**
+   * Main line audio identifier for the current lesson phase.
+   * - Starts with default value (AUDIO_IDS.MAIN_LINE)
+   * - Can be changed via setMainLineAudioId() for different lessons
+   * - Resets to default via resetPlayback()
+   */
+  private mainLineAudioId: string = AUDIO_IDS.MAIN_LINE;
+
+  /**
+   * Immutable default value that mainLineAudioId starts with and resets to.
+   * This provides a consistent fallback for the reveal gate mechanism.
+   */
+  private readonly defaultMainLineAudioId: string = AUDIO_IDS.MAIN_LINE;
 
   private constructor() {
     // Check if Web Speech API is supported
@@ -147,7 +160,7 @@ export class AudioPlaybackService {
     this.playCount = 0;
     this.canReveal = false;
     this.error = null;
-    this.mainLineAudioId = AUDIO_IDS.MAIN_LINE; // Reset to default
+    this.mainLineAudioId = this.defaultMainLineAudioId; // Reset to immutable default
   }
 
   /**
@@ -174,6 +187,9 @@ export class AudioPlaybackService {
    * main line and starts fresh counting for the new main line. This affects the
    * reveal gate mechanism - text will only be revealed after the NEW main line
    * has been played completely at least 2 times.
+   *
+   * @note The mainLineAudioId starts with the default value (AUDIO_IDS.MAIN_LINE) and
+   * can be changed at runtime. Use resetPlayback() to return to the default value.
    *
    * This method should be called when:
    * - Switching between different lessons that have different main phrases
@@ -209,6 +225,14 @@ export class AudioPlaybackService {
    */
   getMainLineAudioId(): string {
     return this.mainLineAudioId;
+  }
+
+  /**
+   * Get the immutable default main line audio identifier
+   * This is the value that mainLineAudioId starts with and resets to
+   */
+  getDefaultMainLineAudioId(): string {
+    return this.defaultMainLineAudioId;
   }
 
   // Private event handlers
