@@ -38,7 +38,7 @@ This is a full-stack web application that:
 
 ### Prerequisites
 - Python 3.11+
-- Node.js 18+
+- Node.js 22+
 - Docker & Docker Compose
 - [just](https://just.systems/) command runner
 

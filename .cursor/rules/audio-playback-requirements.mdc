@@ -1,0 +1,21 @@
+---
+description: Audio playback specifications and requirements
+globs: ["**/audio/**", "**/services/**", "**/components/**"]
+alwaysApply: false
+---
+
+# Audio & Playback Requirements
+
+## Audio Specifications
+- **Clip length**: ≤2.5s per item with volume normalization guidance
+- **Playback**: Single-stream with proper cleanup between clips
+- **Events**: Start/end/error handling with retry capabilities
+- **Gate logic**: Incomplete/errored/aborted plays do not increment reveal gate
+- **Phrase replay**: Available after text reveal
+
+## Implementation Requirements
+- Starting a new clip stops the previous one
+- Listeners are cleaned up properly
+- Errors are surfaced in the UI
+- Single stream playback works reliably
+- Phrase replay functionality with playing state feedback

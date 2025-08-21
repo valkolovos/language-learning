@@ -1,0 +1,222 @@
+import { Lesson, LessonLoadResult, PartialLesson } from "../types/lesson";
+import { SAMPLE_LESSON, AVAILABLE_LESSON_IDS } from "../data/sampleLessons";
+import logger from "./logger";
+import { createErrorDetails } from "../utils/errorUtils";
+
+export class LessonService {
+  /**
+   * Load a lesson by ID
+   * @param lessonId - The unique identifier for the lesson
+   * @returns Promise<LessonLoadResult> - Success/failure with lesson data or error
+   */
+  static async loadLesson(lessonId: string): Promise<LessonLoadResult> {
+    try {
+      // Simulate async loading
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // For now, return the sample lesson
+      // In a real implementation, this would fetch from an API or file system
+      if (lessonId === "meet-greet-001") {
+        return {
+          success: true,
+          lesson: SAMPLE_LESSON,
+        };
+      }
+
+      // Lesson not found
+      return {
+        success: false,
+        error: {
+          type: "invalid_structure",
+          message: `Lesson with ID '${lessonId}' not found`,
+          field: "id",
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          type: "unknown",
+          message: "Failed to load lesson due to unexpected error",
+          details: createErrorDetails(error),
+        },
+      };
+    }
+  }
+
+  /**
+   * Validate lesson content structure
+   * @param lesson - The lesson object to validate
+   * @returns LessonLoadResult - Success/failure with validation results
+   */
+  static validateLesson(lesson: unknown): LessonLoadResult {
+    try {
+      // Type guard to ensure lesson is an object
+      if (!lesson || typeof lesson !== "object") {
+        return {
+          success: false,
+          error: {
+            type: "invalid_structure",
+            message: "Lesson must be a valid object",
+            field: "root",
+          },
+        };
+      }
+
+      // Cast to PartialLesson for validation
+      const lessonObj = lesson as PartialLesson;
+
+      // Check required fields
+      if (!lessonObj.id) {
+        return {
+          success: false,
+          error: {
+            type: "invalid_structure",
+            message: "Lesson must have a valid string ID",
+            field: "id",
+          },
+        };
+      }
+
+      if (!lessonObj.title) {
+        return {
+          success: false,
+          error: {
+            type: "invalid_structure",
+            message: "Lesson must have a valid string title",
+            field: "title",
+          },
+        };
+      }
+
+      if (!lessonObj.mainLine) {
+        return {
+          success: false,
+          error: {
+            type: "invalid_structure",
+            message: "Lesson must have a mainLine object",
+            field: "mainLine",
+          },
+        };
+      }
+
+      if (
+        !lessonObj.mainLine.nativeText ||
+        !lessonObj.mainLine.gloss ||
+        !lessonObj.mainLine.audio
+      ) {
+        return {
+          success: false,
+          error: {
+            type: "invalid_structure",
+            message: "Main line must have nativeText, gloss, and audio",
+            field: "mainLine",
+          },
+        };
+      }
+
+      if (!Array.isArray(lessonObj.phrases) || lessonObj.phrases.length === 0) {
+        return {
+          success: false,
+          error: {
+            type: "invalid_structure",
+            message: "Lesson must have at least one phrase",
+            field: "phrases",
+          },
+        };
+      }
+
+      // Validate each phrase
+      for (let i = 0; i < lessonObj.phrases.length; i++) {
+        const phrase = lessonObj.phrases[i];
+        if (
+          !phrase.id ||
+          !phrase.nativeText ||
+          !phrase.gloss ||
+          !phrase.audio
+        ) {
+          return {
+            success: false,
+            error: {
+              type: "invalid_structure",
+              message: `Phrase ${i + 1} must have id, nativeText, gloss, and audio`,
+              field: `phrases[${i}]`,
+            },
+          };
+        }
+      }
+
+      // Validate audio files exist (basic check)
+      if (!this.validateAudioFiles(lessonObj)) {
+        return {
+          success: false,
+          error: {
+            type: "missing_audio",
+            message: "One or more audio files are missing or invalid",
+            field: "audio",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        lesson: lesson as Lesson,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          type: "parse_error",
+          message: "Failed to parse lesson content",
+          details: createErrorDetails(error),
+        },
+      };
+    }
+  }
+
+  /**
+   * Basic audio file validation
+   * @param lesson - The lesson object to validate
+   * @returns boolean - True if all audio files are valid
+   */
+  private static validateAudioFiles(lesson: PartialLesson): boolean {
+    try {
+      // Check main line audio - must have id and either filename (pre-recorded) or text+language (TTS)
+      const mainAudio = lesson.mainLine.audio;
+      if (
+        !mainAudio.id ||
+        (!mainAudio.filename && (!mainAudio.text || !mainAudio.language))
+      ) {
+        return false;
+      }
+
+      // Check phrase audio files - must have id and either filename (pre-recorded) or text+language (TTS)
+      for (const phrase of lesson.phrases) {
+        const phraseAudio = phrase.audio;
+        if (
+          !phraseAudio.id ||
+          (!phraseAudio.filename &&
+            (!phraseAudio.text || !phraseAudio.language))
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      // Log the error for debugging but return false for validation failure
+      logger.warn("Audio validation error:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Get available lesson IDs
+   * @returns Promise<string[]> - Array of available lesson IDs
+   */
+  static async getAvailableLessons(): Promise<string[]> {
+    // Simulate async loading
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    return AVAILABLE_LESSON_IDS;
+  }
+}

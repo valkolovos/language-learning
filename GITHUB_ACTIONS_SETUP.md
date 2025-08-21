@@ -14,7 +14,7 @@ I've set up GitHub Actions workflows to automatically run tests and quality chec
 - Pull requests to `main` or `develop` branches
 
 **What it does:**
-- Sets up Python 3.11 and Node.js 18.20.0
+- Sets up Python 3.11 and Node.js 22.18.0
 - Installs `uv` for Python dependency management
 - Installs `just` command runner
 - Sets up PostgreSQL and Redis services for testing

@@ -76,6 +76,16 @@ test-e2e-browser browser:
     @echo "Running E2E tests with {{browser}}..."
     @just run-npm "run test:e2e -- --project={{browser}}"
 
+# Run Cucumber tests
+test-cucumber:
+    @echo "Running Cucumber tests..."
+    @npx cucumber-js features/ --format progress
+
+# Run Cucumber tests with HTML report
+test-cucumber-html:
+    @echo "Running Cucumber tests with HTML report..."
+    @npx cucumber-js features/ --format progress --format html:cucumber-report.html
+
 # Lint code
 lint:
     @echo "Running ESLint..."
@@ -241,6 +251,8 @@ help:
     @echo "  just test            - Run tests"
     @echo "  just test-cov        - Run tests with coverage"
     @echo "  just test-e2e        - Run E2E tests"
+    @echo "  just test-cucumber   - Run Cucumber tests"
+    @echo "  just test-cucumber-html - Run Cucumber tests with HTML report"
     @echo ""
     @echo "Code Quality:"
     @echo "  just lint            - Run ESLint"

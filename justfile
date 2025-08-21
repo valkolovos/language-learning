@@ -42,6 +42,7 @@ help:
     @echo "  just test        - Run all tests"
     @echo "  just test-backend - Run backend tests"
     @echo "  just test-frontend - Run frontend tests"
+    @echo "  just test-cucumber - Run Cucumber tests"
     @echo ""
     @echo "Code Quality:"
     @echo "  just quality     - Run all quality checks"
@@ -279,7 +280,7 @@ dev-stop:
     @echo "Development environment stopped! 🛑"
 
 # Run all tests
-test: test-backend test-frontend
+test: test-backend test-frontend test-cucumber
     @echo "All tests completed! 🎯"
 
 # Run backend tests
@@ -291,6 +292,11 @@ test-backend:
 test-frontend:
     @echo "Running frontend tests..."
     cd frontend && just test
+
+# Run Cucumber tests
+test-cucumber:
+    @echo "Running Cucumber tests..."
+    cd frontend && just test-cucumber
 
 # Run tests with coverage
 test-cov: test-backend-cov test-frontend-cov

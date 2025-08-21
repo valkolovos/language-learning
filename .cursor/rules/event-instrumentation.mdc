@@ -1,0 +1,19 @@
+---
+description: Lightweight analytics and event tracking
+globs: ["**/services/**", "**/utils/**"]
+alwaysApply: false
+---
+
+# Event Instrumentation (Lightweight)
+
+## Required Events
+- `lesson_started { lesson_code }`
+- `audio_play { lesson_code, clip_id }`
+- `text_revealed { lesson_code }`
+- `phrase_replay { lesson_code, phrase_id }`
+
+## Implementation
+- Events stored locally (no external services for MVP)
+- Simple, inspectable form (buffered in memory or logged)
+- No cloud dependencies or server round-trips
+- Focus on funnel analysis: start → first play → second play → reveal → phrase replay

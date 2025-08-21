@@ -1,0 +1,31 @@
+---
+description: Technical implementation approach and commit breakdown
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Technical Implementation Strategy
+
+## Implementation Order
+Follow the commit breakdown: Foundation → Audio Engine → Reveal Gate → UI → Phrase Replays → A11y
+
+## Technology Stack
+- **Backend**: Python with FastAPI, SQLAlchemy, and proper type hints
+- **Frontend**: React 18 + TypeScript (no external UI libraries for MVP)
+- **Audio**: Single-stream playback (one clip at a time)
+- **State**: Robust reveal gate logic with play counting validation
+- **UI**: Focus on pre/post-reveal state management
+
+## Development Approach
+- Incremental commits building on previous work
+- Test and validate at each step
+- Maintain or improve code coverage
+- Focus on fastest proof-of-value
+- Implementation-agnostic functional specs
+- Local-first architecture with offline capability
+
+## Development Tools
+- Use `just` commands for all development tasks
+- Run tests with `just test` before making changes
+- Use `just quality` for formatting, linting, and type checking
+- Follow the established development workflow in the repository
