@@ -157,3 +157,34 @@ export interface ExtendedError extends Error {
   technicalDetails: string;
   helpUrl: string; // Help URL for user guidance (required for consistent error handling)
 }
+
+// New types for D2 - Chunk Practice functionality
+export type SpeakingFeedbackState = "clear" | "almost" | "try_again";
+
+export interface MicroTip {
+  id: string;
+  text: string; // ≤ 60 characters, phrase-specific
+  phraseId: string;
+}
+
+export interface SpeakingAttempt {
+  phraseId: string;
+  feedbackState: SpeakingFeedbackState;
+  microTipShown?: MicroTip;
+  timestamp: number;
+}
+
+export interface PracticeSession {
+  lessonId: string;
+  startTime: number;
+  attempts: SpeakingAttempt[];
+  completedPhrases: string[]; // phrase IDs that have been marked complete
+  skippedPhrases: string[]; // phrase IDs that were skipped
+  endTime?: number;
+}
+
+export interface PracticePhrase extends Phrase {
+  microTips: MicroTip[];
+  maxAttempts: number; // maximum attempts before forcing completion
+  skipAfterAttempts: number; // minimum attempts before allowing skip
+}
