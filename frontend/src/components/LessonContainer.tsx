@@ -62,11 +62,23 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   // Screen reader announcements
   const [announcement, setAnnouncement] = useState("");
 
+  // Track component mount state to prevent memory leaks
+  const isMountedRef = useRef(true);
+
   // Announce to screen readers
   const announceToScreenReader = useCallback((message: string) => {
+    if (!isMountedRef.current) return;
+
     setAnnouncement(message);
     // Clear announcement after a short delay to allow screen reader to process
-    setTimeout(() => setAnnouncement(""), 100);
+    const timeoutId = setTimeout(() => {
+      if (isMountedRef.current) {
+        setAnnouncement("");
+      }
+    }, 100);
+
+    // Cleanup timeout on unmount
+    return () => clearTimeout(timeoutId);
   }, []);
 
   // Handle keyboard navigation
@@ -85,15 +97,22 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     }
   }, []);
 
-  // Focus management functions
+  // Focus management functions with cleanup
   const focusRevealButton = useCallback(() => {
-    setTimeout(() => {
-      revealButtonRef.current?.focus();
+    const timeoutId = setTimeout(() => {
+      if (isMountedRef.current && revealButtonRef.current) {
+        revealButtonRef.current.focus();
+      }
     }, 100);
+
+    // Return cleanup function
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const focusFirstPhraseButton = useCallback(() => {
-    firstPhraseButtonRef.current?.focus();
+    if (isMountedRef.current && firstPhraseButtonRef.current) {
+      firstPhraseButtonRef.current.focus();
+    }
   }, []);
 
   // Focus management when state changes
@@ -102,7 +121,8 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
       // Announce that reveal is available and focus the reveal button
       announceToScreenReader(MICROCOPY.SCREEN_READER_REVEAL_AVAILABLE);
       // Small delay to ensure the reveal button is rendered
-      setTimeout(() => focusRevealButton(), 100);
+      const cleanup = focusRevealButton();
+      return cleanup;
     }
   }, [
     playbackState.canReveal,
@@ -116,7 +136,8 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
       // Announce that text is revealed and focus the first phrase button
       announceToScreenReader(MICROCOPY.SCREEN_READER_TEXT_REVEALED);
       // Small delay to ensure phrase buttons are rendered
-      setTimeout(() => focusFirstPhraseButton(), 100);
+      const cleanup = focusFirstPhraseButton();
+      return cleanup;
     }
   }, [textRevealed, announceToScreenReader, focusFirstPhraseButton]);
 
@@ -215,6 +236,13 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   useEffect(() => {
     loadLesson();
   }, [loadLesson]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Handle text reveal
   const handleRevealText = () => {

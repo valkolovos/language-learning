@@ -154,13 +154,12 @@ export class EventTrackingService {
   }
 
   /**
-   * Efficiently prune events by removing excess events in batches
+   * Efficiently prune events by keeping only the most recent maxEvents
    */
   private pruneEvents(): void {
-    const excessCount = this.events.length - this.maxEvents;
-    if (excessCount > 0) {
-      // Remove excess events from the beginning of the array
-      this.events.splice(0, excessCount);
+    if (this.events.length > this.maxEvents) {
+      // Keep only the last maxEvents elements - O(k) where k = maxEvents
+      this.events = this.events.slice(-this.maxEvents);
     }
   }
 }
