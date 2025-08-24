@@ -6,12 +6,12 @@ Feature: Progression rules and completion summary
   Background:
     Given the practice set contains three phrases
 
-  Scenario: Phrase completion on first Clear
-    Given the learner receives "Clear" for a phrase
+  Scenario: Phrase completion on first clear
+    Given the learner receives "clear" for a phrase
     Then the phrase is marked as completed
 
   Scenario: Skip becomes available after configured attempts
-    Given the learner has not achieved a "Clear" on a phrase
+    Given the learner has not achieved a "clear" on a phrase
     And the learner has reached the configured minimum attempts
     Then a Skip option becomes available
     When the learner chooses Skip

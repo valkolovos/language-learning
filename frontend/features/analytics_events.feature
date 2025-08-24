@@ -21,7 +21,7 @@ Feature: Functional analytics event catalog
 
   Scenario: Phrase completed
     When a phrase is marked completed
-    Then an event "phrase_completed" is recorded with the phrase identifier
+    Then an event "phrase_completed" is recorded with the phrase identifier for completion
 
   Scenario: Practice completed
     When the practice summary is displayed

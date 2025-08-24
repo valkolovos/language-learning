@@ -17,17 +17,17 @@ Feature: Speaking attempt feedback is clear and actionable
     Then the learner sees "<state>" feedback
     And the visible next actions match the "<state>" state
     Examples:
-      | state     |
-      | Clear     |
-      | Almost    |
-      | Try again |
+      | state      |
+      | clear      |
+      | almost     |
+      | try_again  |
 
   Scenario: Advancing after a clear result
-    Given the learner has received "Clear" on a phrase
+    Given the learner has received "clear" on a phrase
     When the learner chooses to continue
     Then the next phrase is presented with a prompt to speak
 
-  Scenario: Retrying after Almost or Try again
-    Given the learner has received "Almost" or "Try again"
+  Scenario: Retrying after almost or try_again
+    Given the learner has received "almost" or "try_again"
     When the learner chooses to retry
     Then the prompt to speak the same phrase is shown again
