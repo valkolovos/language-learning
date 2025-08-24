@@ -19,6 +19,11 @@ import {
   getUserFriendlyMessage,
 } from "../utils/errorUtils";
 import { MICROCOPY } from "../constants/microcopy";
+import {
+  PROGRESS_WEIGHTS,
+  XP_REWARDS,
+  PROGRESS_THRESHOLDS,
+} from "../constants/progress";
 import log from "../services/logger";
 
 interface LessonContainerProps {
@@ -79,6 +84,21 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
 
     // Cleanup timeout on unmount
     return () => clearTimeout(timeoutId);
+  }, []);
+
+  // Announce to screen readers without returning cleanup (for event handlers)
+  const announceToScreenReaderImmediate = useCallback((message: string) => {
+    if (!isMountedRef.current) return;
+
+    setAnnouncement(message);
+    // Clear announcement after a short delay to allow screen reader to process
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        setAnnouncement("");
+      }
+    }, 100);
+
+    // Cleanup is handled internally, no return value needed
   }, []);
 
   // Handle keyboard navigation
@@ -168,25 +188,34 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
 
     let progress = 0;
 
-    // Main line progress (50% of total)
+    // Main line progress (PROGRESS_WEIGHTS.MAIN_LINE.TOTAL_WEIGHT% of total)
     if (textRevealed) {
-      progress += 50;
+      progress += PROGRESS_WEIGHTS.MAIN_LINE.TOTAL_WEIGHT;
     } else if (playbackState.playCount > 0) {
-      progress += (playbackState.playCount / 2) * 50;
+      progress +=
+        (playbackState.playCount / PROGRESS_THRESHOLDS.REVEAL_AFTER_PLAYS) *
+        PROGRESS_WEIGHTS.MAIN_LINE.TOTAL_WEIGHT;
     }
 
-    // Phrase interaction progress (50% of total)
+    // Phrase interaction progress (PROGRESS_WEIGHTS.PHRASE_INTERACTIONS.TOTAL_WEIGHT% of total)
     if (textRevealed) {
-      // Base bonus for revealing text (25%)
-      progress += 25;
+      // Base bonus for revealing text (PROGRESS_WEIGHTS.PHRASE_INTERACTIONS.REVEAL_BONUS%)
+      progress += PROGRESS_WEIGHTS.PHRASE_INTERACTIONS.REVEAL_BONUS;
 
-      // Additional progress for phrase interactions (up to 25%)
-      // Each phrase interaction adds 5% progress
-      const phraseProgress = Math.min(25, ((xp - 50) / 10) * 5); // 50 XP is from reveal, each phrase is 10 XP
+      // Additional progress for phrase interactions (up to PROGRESS_WEIGHTS.PHRASE_INTERACTIONS.TOTAL_WEIGHT - PROGRESS_WEIGHTS.PHRASE_INTERACTIONS.REVEAL_BONUS%)
+      // Each phrase interaction adds PROGRESS_WEIGHTS.PHRASE_INTERACTIONS.PER_PHRASE_WEIGHT% progress
+      const phraseProgress = Math.min(
+        PROGRESS_WEIGHTS.PHRASE_INTERACTIONS.TOTAL_WEIGHT -
+          PROGRESS_WEIGHTS.PHRASE_INTERACTIONS.REVEAL_BONUS,
+        ((xp - XP_REWARDS.TEXT_REVEAL) / XP_REWARDS.PHRASE_REPLAY) *
+          PROGRESS_WEIGHTS.PHRASE_INTERACTIONS.PER_PHRASE_WEIGHT,
+      );
       progress += phraseProgress;
     }
 
-    onProgressChange?.(Math.min(100, Math.round(progress)));
+    onProgressChange?.(
+      Math.min(PROGRESS_THRESHOLDS.MAX_PROGRESS, Math.round(progress)),
+    );
   }, [lesson, textRevealed, playbackState.playCount, xp, onProgressChange]);
 
   const loadLesson = useCallback(async () => {
@@ -206,7 +235,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
         eventTracking.current.trackLessonStarted(lessonId);
 
         // Announce lesson loaded
-        announceToScreenReader(MICROCOPY.SCREEN_READER_LESSON_LOADED);
+        announceToScreenReaderImmediate(MICROCOPY.SCREEN_READER_LESSON_LOADED);
       } else {
         const errorMessage = result.error?.message || "Failed to load lesson";
         setError(
@@ -231,7 +260,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [lessonId, resetPlayback, announceToScreenReader]);
+  }, [lessonId, resetPlayback, announceToScreenReaderImmediate]);
 
   useEffect(() => {
     loadLesson();
@@ -251,10 +280,12 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
       // Track text revealed event
       eventTracking.current.trackTextRevealed(lessonId);
       // Award XP for revealing text
-      setXp((prev) => prev + 50);
+      setXp((prev) => prev + XP_REWARDS.TEXT_REVEAL);
 
       // Announce reveal action
-      announceToScreenReader(MICROCOPY.SCREEN_READER_TEXT_REVEALED_ACTION);
+      announceToScreenReaderImmediate(
+        MICROCOPY.SCREEN_READER_TEXT_REVEALED_ACTION,
+      );
     }
   };
 
@@ -262,7 +293,7 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   const handleTranscriptToggle = () => {
     setTranscriptVisible((prev) => !prev);
     // Announce transcript state change
-    announceToScreenReader(
+    announceToScreenReaderImmediate(
       transcriptVisible
         ? MICROCOPY.SCREEN_READER_TRANSLATIONS_HIDDEN
         : MICROCOPY.SCREEN_READER_TRANSLATIONS_SHOWN,
@@ -275,10 +306,10 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     // Track phrase replay event
     eventTracking.current.trackPhraseReplay(audioClip.id, lessonId);
     // Award XP for phrase replay
-    setXp((prev) => prev + 10);
+    setXp((prev) => prev + XP_REWARDS.PHRASE_REPLAY);
 
     // Announce phrase playback
-    announceToScreenReader(`Playing phrase: ${audioClip.id}`);
+    announceToScreenReaderImmediate(`Playing phrase: ${audioClip.id}`);
   };
 
   // Handle replay all phrases
@@ -295,10 +326,10 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
         playAudioSequence(audioSequence);
 
         // Award XP for replay all action
-        setXp((prev) => prev + 25);
+        setXp((prev) => prev + XP_REWARDS.REPLAY_ALL);
 
         // Announce replay all action
-        announceToScreenReader("Replaying all phrases in sequence");
+        announceToScreenReaderImmediate("Replaying all phrases in sequence");
       } catch (error) {
         log.error("Error during replay all:", error);
       }
@@ -406,14 +437,14 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     eventTracking.current.trackAudioPlay(audioClip.id, lessonId);
 
     // Announce main line playback
-    announceToScreenReader("Playing main line audio");
+    announceToScreenReaderImmediate("Playing main line audio");
   };
 
   // Handle main line audio stop
   const handleMainLineStop = () => {
     stopAudio();
     // Announce main line stopped
-    announceToScreenReader("Main line audio stopped");
+    announceToScreenReaderImmediate("Main line audio stopped");
   };
 
   if (loading) {
