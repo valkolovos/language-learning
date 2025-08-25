@@ -1,5 +1,6 @@
 import React, { forwardRef } from "react";
 import { MICROCOPY } from "../constants/microcopy";
+import { XP_REWARDS, PROGRESS_THRESHOLDS } from "../constants/progress";
 
 interface ProgressIndicatorProps {
   xp: number;
@@ -53,7 +54,7 @@ export const ProgressIndicator = forwardRef<
               style={{ width: `${progressPercentage}%` }}
               aria-valuenow={progressPercentage}
               aria-valuemin={0}
-              aria-valuemax={100}
+              aria-valuemax={PROGRESS_THRESHOLDS.MAX_PROGRESS}
               role="progressbar"
               aria-label={`Progress: ${progressPercentage}%`}
             />
@@ -69,19 +70,27 @@ export const ProgressIndicator = forwardRef<
             <div className="xp-breakdown-list">
               <div className="xp-item">
                 <span className="xp-action">Reveal text</span>
-                <span className="xp-points">+50 XP</span>
+                <span className="xp-points">+{XP_REWARDS.TEXT_REVEAL} XP</span>
               </div>
               <div className="xp-item">
                 <span className="xp-action">Replay phrase</span>
-                <span className="xp-points">+10 XP each</span>
+                <span className="xp-points">
+                  +{XP_REWARDS.PHRASE_REPLAY} XP each
+                </span>
               </div>
               <div className="xp-item">
                 <span className="xp-action">Replay all</span>
-                <span className="xp-points">+25 XP</span>
+                <span className="xp-points">+{XP_REWARDS.REPLAY_ALL} XP</span>
               </div>
               <div className="xp-item total">
                 <span className="xp-action">Total possible</span>
-                <span className="xp-points">+105 XP</span>
+                <span className="xp-points">
+                  +
+                  {XP_REWARDS.TEXT_REVEAL +
+                    XP_REWARDS.PHRASE_REPLAY * 5 +
+                    XP_REWARDS.REPLAY_ALL}{" "}
+                  XP
+                </span>
               </div>
             </div>
           </div>

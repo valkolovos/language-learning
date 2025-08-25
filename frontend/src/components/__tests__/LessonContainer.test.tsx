@@ -376,24 +376,36 @@ describe("LessonContainer", () => {
 
     it("should calculate progress correctly before reveal", async () => {
       mockAudioPlaybackHook.playbackState.playCount = 1;
+      const onProgressChange = jest.fn();
 
       const { LessonContainer } = require("../LessonContainer");
-      render(<LessonContainer lessonId="test-lesson" />);
+      render(
+        <LessonContainer
+          lessonId="test-lesson"
+          onProgressChange={onProgressChange}
+        />,
+      );
 
       await waitFor(() => {
         expect(screen.getByText("Test Lesson")).toBeInTheDocument();
       });
 
-      const progressBar = screen.getByRole("progressbar");
-      expect(progressBar).toHaveAttribute("aria-label", "Progress: 25%");
+      // Progress should be calculated based on play count
+      expect(onProgressChange).toHaveBeenCalledWith(25);
     });
 
     it("should calculate progress correctly after reveal", async () => {
       mockAudioPlaybackHook.playbackState.canReveal = true;
       mockAudioPlaybackHook.playbackState.playCount = 2;
+      const onProgressChange = jest.fn();
 
       const { LessonContainer } = require("../LessonContainer");
-      render(<LessonContainer lessonId="test-lesson" />);
+      render(
+        <LessonContainer
+          lessonId="test-lesson"
+          onProgressChange={onProgressChange}
+        />,
+      );
 
       await waitFor(() => {
         expect(screen.getByText("Test Lesson")).toBeInTheDocument();
@@ -409,15 +421,61 @@ describe("LessonContainer", () => {
         expect(screen.getByText("Practice Phrases")).toBeInTheDocument();
       });
 
-      const progressBar = screen.getByRole("progressbar");
-      expect(progressBar).toHaveAttribute("aria-label", "Progress: 75%");
+      // Progress should be calculated after reveal (75%)
+      expect(onProgressChange).toHaveBeenCalledWith(75);
+    });
+
+    it("should increase progress with phrase interactions", async () => {
+      mockAudioPlaybackHook.playbackState.canReveal = true;
+      const onProgressChange = jest.fn();
+
+      const { LessonContainer } = require("../LessonContainer");
+      render(
+        <LessonContainer
+          lessonId="test-lesson"
+          onProgressChange={onProgressChange}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Test Lesson")).toBeInTheDocument();
+      });
+
+      // Reveal text first
+      const revealButton = screen.getByRole("button", {
+        name: /reveal lesson text/i,
+      });
+      fireEvent.click(revealButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Practice Phrases")).toBeInTheDocument();
+      });
+
+      // Progress should be 75% after reveal
+      expect(onProgressChange).toHaveBeenCalledWith(75);
+
+      // Play a phrase
+      const phraseButton = screen.getByRole("button", {
+        name: /play phrase phrase: I'm fine, thank you/i,
+      });
+      fireEvent.click(phraseButton);
+
+      // Progress should increase to 80% (75% + 5% for phrase interaction)
+      expect(onProgressChange).toHaveBeenCalledWith(80);
     });
 
     it("should award XP for text reveal", async () => {
       mockAudioPlaybackHook.playbackState.canReveal = true;
+      const onXpChange = jest.fn();
 
       const { LessonContainer } = require("../LessonContainer");
-      render(<LessonContainer lessonId="test-lesson" />);
+      render(
+        <LessonContainer
+          lessonId="test-lesson"
+          onXpChange={onXpChange}
+          onProgressChange={jest.fn()}
+        />,
+      );
 
       await waitFor(() => {
         expect(screen.getByText("Test Lesson")).toBeInTheDocument();
@@ -428,15 +486,22 @@ describe("LessonContainer", () => {
       });
       fireEvent.click(revealButton);
 
-      // XP should be displayed (50 for reveal)
-      expect(screen.getByText("50 XP")).toBeInTheDocument();
+      // XP should be awarded (50 for reveal)
+      expect(onXpChange).toHaveBeenCalledWith(50);
     });
 
     it("should award XP for phrase replay", async () => {
       mockAudioPlaybackHook.playbackState.canReveal = true;
+      const onXpChange = jest.fn();
 
       const { LessonContainer } = require("../LessonContainer");
-      render(<LessonContainer lessonId="test-lesson" />);
+      render(
+        <LessonContainer
+          lessonId="test-lesson"
+          onXpChange={onXpChange}
+          onProgressChange={jest.fn()}
+        />,
+      );
 
       await waitFor(() => {
         expect(screen.getByText("Test Lesson")).toBeInTheDocument();
@@ -457,8 +522,8 @@ describe("LessonContainer", () => {
       });
       fireEvent.click(phraseButton);
 
-      // XP should be displayed (50 for reveal + 10 for phrase replay)
-      expect(screen.getByText("60 XP")).toBeInTheDocument();
+      // XP should be awarded (50 for reveal + 10 for phrase replay)
+      expect(onXpChange).toHaveBeenCalledWith(60);
     });
   });
 
@@ -474,7 +539,9 @@ describe("LessonContainer", () => {
 
     it("should toggle transcript visibility", async () => {
       const { LessonContainer } = require("../LessonContainer");
-      render(<LessonContainer lessonId="test-lesson" />);
+      render(
+        <LessonContainer lessonId="test-lesson" onProgressChange={jest.fn()} />,
+      );
 
       await waitFor(() => {
         expect(screen.getByText("Test Lesson")).toBeInTheDocument();
@@ -500,31 +567,23 @@ describe("LessonContainer", () => {
       // The gloss text should be hidden by the TranscriptToggle component
     });
 
-    it("should toggle XP breakdown", async () => {
+    it("should handle XP changes through callback", async () => {
+      const onXpChange = jest.fn();
       const { LessonContainer } = require("../LessonContainer");
-      render(<LessonContainer lessonId="test-lesson" />);
+      render(
+        <LessonContainer
+          lessonId="test-lesson"
+          onXpChange={onXpChange}
+          onProgressChange={jest.fn()}
+        />,
+      );
 
       await waitFor(() => {
         expect(screen.getByText("Test Lesson")).toBeInTheDocument();
       });
 
-      // Reveal text first
-      const revealButton = screen.getByRole("button", {
-        name: /reveal lesson text/i,
-      });
-      fireEvent.click(revealButton);
-
-      await waitFor(() => {
-        expect(screen.getByText("Practice Phrases")).toBeInTheDocument();
-      });
-
-      const xpBreakdownToggle = screen.getByRole("button", {
-        name: /show xp breakdown/i,
-      });
-      fireEvent.click(xpBreakdownToggle);
-
-      // XP breakdown should be shown
-      expect(screen.getByText("XP Breakdown")).toBeInTheDocument();
+      // XP callback should be called with initial value
+      expect(onXpChange).toHaveBeenCalledWith(0);
     });
   });
 

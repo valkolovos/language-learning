@@ -43,14 +43,9 @@ export class EventTrackingService {
   private static instance: EventTrackingService;
   private events: TrackedEvent[] = [];
   private maxEvents: number = 100; // Keep last 100 events in memory
-  private pruneThreshold: number; // Start pruning when we exceed this threshold
+  private pruneThreshold: number = 120; // Start pruning when we exceed this threshold
 
-  private constructor() {
-    // Set prune threshold to 20% above maxEvents for consistent behavior
-    // This buffer prevents frequent pruning on every single event addition
-    // while maintaining memory efficiency by not letting events grow too large
-    this.pruneThreshold = Math.floor(this.maxEvents * 1.2);
-  }
+  private constructor() {}
 
   static getInstance(): EventTrackingService {
     if (!EventTrackingService.instance) {
@@ -109,7 +104,6 @@ export class EventTrackingService {
    * Get all tracked events
    */
   getEvents(): TrackedEvent[] {
-    // Return events in chronological order
     return [...this.events];
   }
 
@@ -117,7 +111,7 @@ export class EventTrackingService {
    * Get events by type
    */
   getEventsByType(type: TrackedEvent["type"]): TrackedEvent[] {
-    return this.getEvents().filter((event) => event.type === type);
+    return this.events.filter((event) => event.type === type);
   }
 
   /**
@@ -131,7 +125,7 @@ export class EventTrackingService {
    * Export events as JSON (useful for debugging/inspection)
    */
   exportEvents(): string {
-    return JSON.stringify(this.getEvents(), null, 2);
+    return JSON.stringify(this.events, null, 2);
   }
 
   /**
@@ -139,8 +133,7 @@ export class EventTrackingService {
    */
   logEvents(): void {
     log.debug("Event Tracking - All Events");
-    const events = this.getEvents();
-    events.forEach((event, index) => {
+    this.events.forEach((event, index) => {
       log.debug(`${index + 1}. ${event.type}`, event);
     });
   }
@@ -162,12 +155,10 @@ export class EventTrackingService {
 
   /**
    * Efficiently prune events by keeping only the most recent maxEvents
-   * This maintains chronological order while limiting memory usage
    */
   private pruneEvents(): void {
-    const excessCount = this.events.length - this.maxEvents;
-    if (excessCount > 0) {
-      // Keep only the most recent events by slicing from the end
+    if (this.events.length > this.maxEvents) {
+      // Keep only the last maxEvents elements - O(k) where k = maxEvents
       this.events = this.events.slice(-this.maxEvents);
     }
   }

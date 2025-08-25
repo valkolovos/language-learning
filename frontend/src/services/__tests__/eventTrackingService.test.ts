@@ -38,19 +38,21 @@ describe("EventTrackingService", () => {
     it("should track a lesson started event", () => {
       service.trackLessonStarted("lesson-123");
 
-      expect(service["events"]).toHaveLength(1);
-      expect(service["events"][0].type).toBe("lesson_started");
-      expect(service["events"][0].lessonId).toBe("lesson-123");
-      expect(service["events"][0].timestamp).toBeGreaterThan(0);
+      const events = service.getEvents();
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe("lesson_started");
+      expect(events[0].lessonId).toBe("lesson-123");
+      expect(events[0].timestamp).toBeGreaterThan(0);
     });
 
     it("should track multiple lesson started events", () => {
       service.trackLessonStarted("lesson-123");
       service.trackLessonStarted("lesson-456");
 
-      expect(service["events"]).toHaveLength(2);
-      expect(service["events"][0].lessonId).toBe("lesson-123");
-      expect(service["events"][1].lessonId).toBe("lesson-456");
+      const events = service.getEvents();
+      expect(events).toHaveLength(2);
+      expect(events[0].lessonId).toBe("lesson-123");
+      expect(events[1].lessonId).toBe("lesson-456");
     });
   });
 
@@ -58,20 +60,22 @@ describe("EventTrackingService", () => {
     it("should track an audio play event", () => {
       service.trackAudioPlay("audio-123", "lesson-456");
 
-      expect(service["events"]).toHaveLength(1);
-      expect(service["events"][0].type).toBe("audio_play");
-      expect(service["events"][0].audioId).toBe("audio-123");
-      expect(service["events"][0].lessonId).toBe("lesson-456");
-      expect(service["events"][0].timestamp).toBeGreaterThan(0);
+      const events = service.getEvents();
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe("audio_play");
+      expect(events[0].audioId).toBe("audio-123");
+      expect(events[0].lessonId).toBe("lesson-456");
+      expect(events[0].timestamp).toBeGreaterThan(0);
     });
 
     it("should track audio play event without lesson ID", () => {
       service.trackAudioPlay("audio-123");
 
-      expect(service["events"]).toHaveLength(1);
-      expect(service["events"][0].type).toBe("audio_play");
-      expect(service["events"][0].audioId).toBe("audio-123");
-      expect(service["events"][0].lessonId).toBeUndefined();
+      const events = service.getEvents();
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe("audio_play");
+      expect(events[0].audioId).toBe("audio-123");
+      expect(events[0].lessonId).toBeUndefined();
     });
   });
 
@@ -79,18 +83,20 @@ describe("EventTrackingService", () => {
     it("should track text revealed event", () => {
       service.trackTextRevealed("lesson-123");
 
-      expect(service["events"]).toHaveLength(1);
-      expect(service["events"][0].type).toBe("text_revealed");
-      expect(service["events"][0].lessonId).toBe("lesson-123");
-      expect(service["events"][0].timestamp).toBeGreaterThan(0);
+      const events = service.getEvents();
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe("text_revealed");
+      expect(events[0].lessonId).toBe("lesson-123");
+      expect(events[0].timestamp).toBeGreaterThan(0);
     });
 
     it("should track text revealed event without lesson ID", () => {
       service.trackTextRevealed();
 
-      expect(service["events"]).toHaveLength(1);
-      expect(service["events"][0].type).toBe("text_revealed");
-      expect(service["events"][0].lessonId).toBeUndefined();
+      const events = service.getEvents();
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe("text_revealed");
+      expect(events[0].lessonId).toBeUndefined();
     });
   });
 
@@ -98,20 +104,22 @@ describe("EventTrackingService", () => {
     it("should track phrase replay event", () => {
       service.trackPhraseReplay("phrase-123", "lesson-456");
 
-      expect(service["events"]).toHaveLength(1);
-      expect(service["events"][0].type).toBe("phrase_replay");
-      expect(service["events"][0].phraseId).toBe("phrase-123");
-      expect(service["events"][0].lessonId).toBe("lesson-456");
-      expect(service["events"][0].timestamp).toBeGreaterThan(0);
+      const events = service.getEvents();
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe("phrase_replay");
+      expect(events[0].phraseId).toBe("phrase-123");
+      expect(events[0].lessonId).toBe("lesson-456");
+      expect(events[0].timestamp).toBeGreaterThan(0);
     });
 
     it("should track phrase replay event without lesson ID", () => {
       service.trackPhraseReplay("phrase-123");
 
-      expect(service["events"]).toHaveLength(1);
-      expect(service["events"][0].type).toBe("phrase_replay");
-      expect(service["events"][0].phraseId).toBe("phrase-123");
-      expect(service["events"][0].lessonId).toBeUndefined();
+      const events = service.getEvents();
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe("phrase_replay");
+      expect(events[0].phraseId).toBe("phrase-123");
+      expect(events[0].lessonId).toBeUndefined();
     });
   });
 
@@ -121,10 +129,11 @@ describe("EventTrackingService", () => {
       service.trackAudioPlay("audio-1");
       service.trackTextRevealed("lesson-1");
 
-      expect(service["events"]).toHaveLength(3);
-      expect(service["events"][0].type).toBe("lesson_started");
-      expect(service["events"][1].type).toBe("audio_play");
-      expect(service["events"][2].type).toBe("text_revealed");
+      const events = service.getEvents();
+      expect(events).toHaveLength(3);
+      expect(events[0].type).toBe("lesson_started");
+      expect(events[1].type).toBe("audio_play");
+      expect(events[2].type).toBe("text_revealed");
     });
 
     it("should limit stored events to maxEvents", () => {
@@ -134,9 +143,8 @@ describe("EventTrackingService", () => {
       service.trackLessonStarted("lesson-1");
       service.trackLessonStarted("lesson-2");
       service.trackLessonStarted("lesson-3");
-      service.trackLessonStarted("lesson-4"); // This should trigger pruning
+      service.trackLessonStarted("lesson-4"); // This should remove the first event
 
-      // With circular buffer, we get the most recent events
       const events = service.getEvents();
       expect(events).toHaveLength(3);
       expect(events[0].lessonId).toBe("lesson-2");
@@ -165,12 +173,8 @@ describe("EventTrackingService", () => {
     });
 
     it("should filter events by type", () => {
-      const lessonEvents = service
-        .getEvents()
-        .filter((e) => e.type === "lesson_started");
-      const audioEvents = service
-        .getEvents()
-        .filter((e) => e.type === "audio_play");
+      const lessonEvents = service.getEventsByType("lesson_started");
+      const audioEvents = service.getEventsByType("audio_play");
 
       expect(lessonEvents).toHaveLength(1);
       expect(audioEvents).toHaveLength(1);
@@ -218,7 +222,8 @@ describe("EventTrackingService", () => {
       }
 
       // Should complete in reasonable time (less than 100ms)
-      expect(service.getEvents()).toHaveLength(100);
+      const events = service.getEvents();
+      expect(events).toHaveLength(100);
     });
   });
 });

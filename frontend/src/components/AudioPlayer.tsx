@@ -1,6 +1,7 @@
 import React, { forwardRef } from "react";
 import { AudioClip } from "../types/lesson";
 import { MICROCOPY } from "../constants/microcopy";
+import { PROGRESS_THRESHOLDS } from "../constants/progress";
 
 interface AudioPlayerProps {
   audioClip: AudioClip;
@@ -55,7 +56,8 @@ export const AudioPlayer = forwardRef<HTMLButtonElement, AudioPlayerProps>(
       if (error) return `Error: ${error}`;
       if (isPlaying) return "Playing...";
       if (canReveal) return "Ready to reveal text!";
-      if (playCount > 0) return `Played ${playCount}/2 times`;
+      if (playCount > 0)
+        return `Played ${playCount}/${PROGRESS_THRESHOLDS.REVEAL_AFTER_PLAYS} times`;
       return MICROCOPY.LISTEN_FIRST_TO_UNLOCK;
     };
 
@@ -84,12 +86,16 @@ export const AudioPlayer = forwardRef<HTMLButtonElement, AudioPlayerProps>(
               <div className="progress-bar">
                 <div
                   className="progress-fill"
-                  style={{ width: `${(playCount / 2) * 100}%` }}
+                  style={{
+                    width: `${(playCount / PROGRESS_THRESHOLDS.REVEAL_AFTER_PLAYS) * 100}%`,
+                  }}
                   data-testid="progress-fill"
-                  aria-label={`Progress: ${playCount} out of 2 plays completed`}
+                  aria-label={`Progress: ${playCount} out of ${PROGRESS_THRESHOLDS.REVEAL_AFTER_PLAYS} plays completed`}
                 />
               </div>
-              <span className="progress-text">{playCount}/2</span>
+              <span className="progress-text">
+                {playCount}/{PROGRESS_THRESHOLDS.REVEAL_AFTER_PLAYS}
+              </span>
             </div>
           )}
         </div>

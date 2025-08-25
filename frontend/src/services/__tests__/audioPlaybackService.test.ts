@@ -43,6 +43,38 @@ describe("AudioPlaybackService", () => {
     service.resetPlayback();
   });
 
+  describe("constructor", () => {
+    it("should throw error when speech synthesis is not supported", () => {
+      // Clear the singleton instance to force new construction
+      (
+        AudioPlaybackService as unknown as {
+          instance: AudioPlaybackService | null;
+        }
+      ).instance = null;
+
+      // Temporarily override the window.speechSynthesis to be undefined
+      const originalSpeechSynthesis = window.speechSynthesis;
+      (
+        window as { speechSynthesis: SpeechSynthesis | undefined }
+      ).speechSynthesis = undefined;
+
+      // Expect getInstance to throw when speech synthesis is not available
+      expect(() => AudioPlaybackService.getInstance()).toThrow(
+        "Speech synthesis is not supported in your browser.",
+      );
+
+      // Restore speechSynthesis and reset instance
+      (
+        window as { speechSynthesis: SpeechSynthesis | undefined }
+      ).speechSynthesis = originalSpeechSynthesis;
+      (
+        AudioPlaybackService as unknown as {
+          instance: AudioPlaybackService | null;
+        }
+      ).instance = null;
+    });
+  });
+
   afterEach(() => {
     // Clean up any event listeners
     if (service.removeEventListener) {

@@ -53,7 +53,7 @@ test("app contains title text", async () => {
     expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
   });
 
-  expect(screen.getByText("AI Language Learning")).toBeInTheDocument();
+  expect(screen.getByText("EarFirst")).toBeInTheDocument();
 });
 
 test("app shows lesson selector", async () => {
