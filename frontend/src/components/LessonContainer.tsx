@@ -117,49 +117,50 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
     }
   }, []);
 
-  // Focus management functions with cleanup
-  const focusRevealButton = useCallback(() => {
-    const timeoutId = setTimeout(() => {
-      if (isMountedRef.current && revealButtonRef.current) {
-        revealButtonRef.current.focus();
-      }
-    }, 100);
-
-    // Return cleanup function
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  const focusFirstPhraseButton = useCallback(() => {
-    if (isMountedRef.current && firstPhraseButtonRef.current) {
-      firstPhraseButtonRef.current.focus();
-    }
-  }, []);
-
   // Focus management when state changes
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout | undefined;
+
     if (playbackState.canReveal && !textRevealed) {
       // Announce that reveal is available and focus the reveal button
       announceToScreenReader(MICROCOPY.SCREEN_READER_REVEAL_AVAILABLE);
       // Small delay to ensure the reveal button is rendered
-      const cleanup = focusRevealButton();
-      return cleanup;
+      timeoutId = setTimeout(() => {
+        if (isMountedRef.current && revealButtonRef.current) {
+          revealButtonRef.current.focus();
+        }
+      }, 100);
     }
-  }, [
-    playbackState.canReveal,
-    textRevealed,
-    announceToScreenReader,
-    focusRevealButton,
-  ]);
+
+    // Return cleanup function to clear timeout when effect is cleaned up
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [playbackState.canReveal, textRevealed, announceToScreenReader]);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout | undefined;
+
     if (textRevealed) {
       // Announce that text is revealed and focus the first phrase button
       announceToScreenReader(MICROCOPY.SCREEN_READER_TEXT_REVEALED);
       // Small delay to ensure phrase buttons are rendered
-      const cleanup = focusFirstPhraseButton();
-      return cleanup;
+      timeoutId = setTimeout(() => {
+        if (isMountedRef.current && firstPhraseButtonRef.current) {
+          firstPhraseButtonRef.current.focus();
+        }
+      }, 100);
     }
-  }, [textRevealed, announceToScreenReader, focusFirstPhraseButton]);
+
+    // Return cleanup function to clear timeout when effect is cleaned up
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [textRevealed, announceToScreenReader]);
 
   // Announce audio playback state changes
   useEffect(() => {
