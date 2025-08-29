@@ -183,6 +183,32 @@ describe("AudioPlaybackService", () => {
         details: expect.any(Object),
       });
     });
+
+    it("should throw error with user-friendly message when TTS fails", async () => {
+      const audioClip: AudioClip = {
+        type: "tts",
+        id: "test-audio",
+        text: "Hello world",
+        language: "en-US",
+        duration: 2.5,
+        volume: 0.8,
+      };
+
+      // Mock the SpeechSynthesisUtterance constructor to throw an error
+      const originalConstructor = global.SpeechSynthesisUtterance;
+      global.SpeechSynthesisUtterance = jest.fn().mockImplementation(() => {
+        throw new Error("TTS initialization failed");
+      });
+
+      try {
+        await expect(service.playAudio(audioClip)).rejects.toThrow(
+          "Failed to start audio playback: Error: TTS initialization failed",
+        );
+      } finally {
+        // Restore the original constructor
+        global.SpeechSynthesisUtterance = originalConstructor;
+      }
+    });
   });
 
   describe("stopAudio", () => {

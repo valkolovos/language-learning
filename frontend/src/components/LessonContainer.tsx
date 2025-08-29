@@ -28,7 +28,17 @@ import log from "../services/logger";
 
 interface LessonContainerProps {
   lessonId: string;
+  /**
+   * Callback triggered when the user's XP changes during the lesson.
+   * Called after each XP-earning action (text reveal, phrase replay, replay all).
+   * @param xp - The new total XP value (non-negative integer)
+   */
   onXpChange?: (xp: number) => void;
+  /**
+   * Callback triggered when the lesson progress changes.
+   * Called whenever the user makes progress toward lesson completion.
+   * @param progress - The lesson progress percentage (0-100, where 100 = complete)
+   */
   onProgressChange?: (progress: number) => void;
 }
 

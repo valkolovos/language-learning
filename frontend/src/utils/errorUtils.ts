@@ -20,7 +20,7 @@ export interface SerializedError {
  * @param message - Technical error message
  * @param userMessage - User-friendly error message
  * @param technicalDetails - Detailed technical information (optional, defaults to message)
- * @param helpUrl - URL for help documentation (optional, defaults to empty string)
+ * @param helpUrl - URL for help documentation (optional, defaults to undefined)
  * @returns ExtendedError - Enhanced error with user-friendly properties
  */
 export function createExtendedError(
@@ -32,7 +32,7 @@ export function createExtendedError(
   const error = new Error(message) as ExtendedError;
   error.userMessage = userMessage;
   error.technicalDetails = technicalDetails || message; // Fallback to message if no technical details
-  error.helpUrl = helpUrl || ""; // Empty string if no help URL
+  error.helpUrl = helpUrl; // undefined if no help URL provided
   return error;
 }
 
