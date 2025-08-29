@@ -82,8 +82,8 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
       }
     }, 100);
 
-    // Cleanup timeout on unmount
-    return () => clearTimeout(timeoutId);
+    // Store timeout ID for cleanup
+    return timeoutId;
   }, []);
 
   // Announce to screen readers without returning cleanup (for event handlers)
@@ -120,10 +120,13 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
   // Focus management when state changes
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | undefined;
+    let announcementTimeoutId: NodeJS.Timeout | undefined;
 
     if (playbackState.canReveal && !textRevealed) {
       // Announce that reveal is available and focus the reveal button
-      announceToScreenReader(MICROCOPY.SCREEN_READER_REVEAL_AVAILABLE);
+      announcementTimeoutId = announceToScreenReader(
+        MICROCOPY.SCREEN_READER_REVEAL_AVAILABLE,
+      );
       // Small delay to ensure the reveal button is rendered
       timeoutId = setTimeout(() => {
         if (isMountedRef.current && revealButtonRef.current) {
@@ -132,20 +135,26 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
       }, 100);
     }
 
-    // Return cleanup function to clear timeout when effect is cleaned up
+    // Return cleanup function to clear timeouts when effect is cleaned up
     return () => {
       if (timeoutId) {
         clearTimeout(timeoutId);
+      }
+      if (announcementTimeoutId) {
+        clearTimeout(announcementTimeoutId);
       }
     };
   }, [playbackState.canReveal, textRevealed, announceToScreenReader]);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | undefined;
+    let announcementTimeoutId: NodeJS.Timeout | undefined;
 
     if (textRevealed) {
       // Announce that text is revealed and focus the first phrase button
-      announceToScreenReader(MICROCOPY.SCREEN_READER_TEXT_REVEALED);
+      announcementTimeoutId = announceToScreenReader(
+        MICROCOPY.SCREEN_READER_TEXT_REVEALED,
+      );
       // Small delay to ensure phrase buttons are rendered
       timeoutId = setTimeout(() => {
         if (isMountedRef.current && firstPhraseButtonRef.current) {
@@ -154,21 +163,37 @@ export const LessonContainer: React.FC<LessonContainerProps> = ({
       }, 100);
     }
 
-    // Return cleanup function to clear timeout when effect is cleaned up
+    // Return cleanup function to clear timeouts when effect is cleaned up
     return () => {
       if (timeoutId) {
         clearTimeout(timeoutId);
+      }
+      if (announcementTimeoutId) {
+        clearTimeout(announcementTimeoutId);
       }
     };
   }, [textRevealed, announceToScreenReader]);
 
   // Announce audio playback state changes
   useEffect(() => {
+    let announcementTimeoutId: NodeJS.Timeout | undefined;
+
     if (playbackState.isPlaying) {
-      announceToScreenReader(MICROCOPY.SCREEN_READER_AUDIO_PLAYING);
+      announcementTimeoutId = announceToScreenReader(
+        MICROCOPY.SCREEN_READER_AUDIO_PLAYING,
+      );
     } else if (playbackState.currentAudioId) {
-      announceToScreenReader(MICROCOPY.SCREEN_READER_AUDIO_STOPPED);
+      announcementTimeoutId = announceToScreenReader(
+        MICROCOPY.SCREEN_READER_AUDIO_STOPPED,
+      );
     }
+
+    // Return cleanup function to clear announcement timeout when effect is cleaned up
+    return () => {
+      if (announcementTimeoutId) {
+        clearTimeout(announcementTimeoutId);
+      }
+    };
   }, [
     playbackState.isPlaying,
     playbackState.currentAudioId,
