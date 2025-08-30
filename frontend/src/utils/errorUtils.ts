@@ -11,7 +11,7 @@ export interface SerializedError {
   value?: string;
   userMessage?: string;
   technicalDetails?: string;
-  helpUrl: string; // Help URL for user guidance (required for consistency)
+  helpUrl?: string;
   [key: string]: unknown;
 }
 
@@ -20,7 +20,7 @@ export interface SerializedError {
  * @param message - Technical error message
  * @param userMessage - User-friendly error message
  * @param technicalDetails - Detailed technical information (optional, defaults to message)
- * @param helpUrl - URL for help documentation (optional, defaults to empty string)
+ * @param helpUrl - URL for help documentation (optional, defaults to undefined)
  * @returns ExtendedError - Enhanced error with user-friendly properties
  */
 export function createExtendedError(
@@ -29,12 +29,11 @@ export function createExtendedError(
   technicalDetails?: string,
   helpUrl?: string,
 ): ExtendedError {
-  const error = new Error(message);
-  return Object.assign(error, {
-    userMessage,
-    technicalDetails: technicalDetails || message, // Fallback to message if no technical details
-    helpUrl: helpUrl || "https://help.example.com/troubleshooting", // Default help URL for consistent guidance
-  }) as ExtendedError;
+  const error = new Error(message) as ExtendedError;
+  error.userMessage = userMessage;
+  error.technicalDetails = technicalDetails || message; // Fallback to message if no technical details
+  error.helpUrl = helpUrl; // undefined if no help URL provided
+  return error;
 }
 
 /**
@@ -47,12 +46,7 @@ export function createSimpleExtendedError(
   message: string,
   userMessage: string,
 ): ExtendedError {
-  return createExtendedError(
-    message,
-    userMessage,
-    undefined,
-    "https://help.example.com/troubleshooting",
-  );
+  return createExtendedError(message, userMessage);
 }
 
 /**
@@ -67,12 +61,7 @@ export function createInternalError(
   userMessage: string,
   technicalDetails?: string,
 ): ExtendedError {
-  return createExtendedError(
-    message,
-    userMessage,
-    technicalDetails,
-    "https://help.example.com/internal-errors",
-  );
+  return createExtendedError(message, userMessage, technicalDetails);
 }
 
 /**
@@ -91,7 +80,7 @@ export function wrapError(
     error.message,
     userMessage,
     error.stack || error.message,
-    helpUrl || "https://help.example.com/troubleshooting",
+    helpUrl,
   );
 }
 
@@ -103,11 +92,9 @@ export function wrapError(
 export function isExtendedError(error: unknown): error is ExtendedError {
   return (
     error instanceof Error &&
-    typeof (error as unknown as Record<string, unknown>).userMessage ===
-      "string" &&
-    typeof (error as unknown as Record<string, unknown>).technicalDetails ===
-      "string" &&
-    typeof (error as unknown as Record<string, unknown>).helpUrl === "string"
+    "userMessage" in error &&
+    "technicalDetails" in error &&
+    "helpUrl" in error
   );
 }
 
@@ -139,7 +126,7 @@ export function serializeError(error: unknown): SerializedError {
       stack: error.stack,
       userMessage: error.userMessage,
       technicalDetails: error.technicalDetails,
-      helpUrl: error.helpUrl, // This is now always defined
+      helpUrl: error.helpUrl,
     };
   }
 
@@ -148,14 +135,12 @@ export function serializeError(error: unknown): SerializedError {
       message: error.message,
       name: error.name,
       stack: error.stack,
-      helpUrl: "https://help.example.com/troubleshooting", // Default help URL for regular errors
     };
   }
 
   return {
     message: String(error),
     value: String(error),
-    helpUrl: "https://help.example.com/troubleshooting", // Default help URL for unknown errors
   };
 }
 

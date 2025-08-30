@@ -67,52 +67,27 @@ export interface PartialLesson {
   };
 }
 
-/**
- * Represents a supporting phrase within a language learning lesson.
- * These phrases provide context, variations, or related expressions to the main line.
- */
 export interface Phrase {
-  /** Unique identifier for the phrase within the lesson */
   id: string;
-  /** The phrase text in the target language (e.g., Greek) */
   nativeText: string;
-  /** Learner-friendly translation or explanation of the phrase */
-  gloss: string;
-  /** Optional learning tips or cultural context for the phrase */
-  tips?: string;
-  /** Audio representation of the phrase (TTS or pre-recorded) */
+  gloss: string; // learner-friendly translation/explanation
+  tips?: string; // optional learning tips
   audio: AudioClip;
 }
 
-/**
- * Represents a complete language learning lesson containing a main line and supporting phrases.
- * This is the core data structure for the MVP's single micro-lesson approach.
- */
 export interface Lesson {
-  /** Unique identifier for the lesson */
   id: string;
-  /** Human-readable title of the lesson */
   title: string;
-  /** The primary learning target - the main phrase to be mastered */
   mainLine: {
-    /** The main phrase text in the target language */
     nativeText: string;
-    /** Learner-friendly translation or explanation */
     gloss: string;
-    /** Optional learning tips or cultural context */
     tips?: string;
-    /** Audio representation of the main phrase */
     audio: AudioClip;
   };
-  /** Supporting phrases that provide context and variations */
   phrases: Phrase[];
-  /** Optional metadata for lesson categorization and planning */
   metadata?: {
-    /** Estimated difficulty level for the lesson */
     difficulty?: "beginner" | "intermediate" | "advanced";
-    /** Estimated time to complete the lesson in minutes */
-    estimatedDuration?: number;
-    /** Tags for categorization and search */
+    estimatedDuration?: number; // in minutes
     tags?: string[];
   };
 }
@@ -155,5 +130,5 @@ export interface AudioPlaybackEvent {
 export interface ExtendedError extends Error {
   userMessage: string;
   technicalDetails: string;
-  helpUrl: string; // Help URL for user guidance (required for consistent error handling)
+  helpUrl?: string;
 }
